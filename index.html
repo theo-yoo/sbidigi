@@ -2,10 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
 <title>추억의 산성비 타자 게임</title>
 <style>
-/* 전체 스타일 */
 * {
 box-sizing: border-box;
 margin: 0;
@@ -18,10 +17,9 @@ body {
 background-color: #f0f0f0;
 color: #333;
 text-align: center;
-overflow: hidden; /* 글자가 화면 밖으로 나가도 스크롤 안 생기게 */
+overflow: hidden;
 }
 
-/* 게임 헤더 (점수, 라이프, 레벨) */
 #header {
 background-color: #333;
 color: white;
@@ -32,6 +30,7 @@ align-items: center;
 font-size: 1.2rem;
 font-weight: bold;
 box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+height: 55px;
 }
 
 .stat-val {
@@ -43,26 +42,15 @@ margin-left: 5px;
 color: #ff6b6b;
 }
 
-/* 게임 화면 /
 #game-area {
 position: relative;
 width: 100%;
-height: calc(100vh - 140px); / 헤더와 입력창 제외한 높이 /
+height: calc(100vh - 125px);
 background-color: #2c3e50;
 overflow: hidden;
-border-bottom: 5px solid #ff6b6b; / 바닥 감지선 */
+border-bottom: 5px solid #ff6b6b;
 }
 
-/* 바닥선 감지 */
-#ground {
-position: absolute;
-bottom: 0;
-width: 100%;
-height: 5px;
-background-color: transparent;
-}
-
-/* 떨어지는 글자 스타일 /
 .word {
 position: absolute;
 color: white;
@@ -71,20 +59,18 @@ font-weight: bold;
 padding: 5px 10px;
 border-radius: 5px;
 text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
-white-space: nowrap; / 글자가 줄바꿈 안 되게 /
-transition: color 0.1s; / 입력 시 색상 반응 */
+white-space: nowrap;
+transition: color 0.1s;
 }
 
-/* 현재 입력 중인 글자 하이라이트 */
 .word.target {
 color: #ff9f43;
 border: 2px solid #ff9f43;
 }
 
-/* 게임 입력창 */
 #input-area {
 background-color: #333;
-padding: 15px;
+padding: 10px;
 position: fixed;
 bottom: 0;
 width: 100%;
@@ -95,7 +81,7 @@ align-items: center;
 }
 
 #input-word {
-width: 80%;
+width: 85%;
 max-width: 400px;
 padding: 10px 15px;
 font-size: 1.2rem;
@@ -109,7 +95,6 @@ text-align: center;
 border-color: #ff9f43;
 }
 
-/* 게임 시작/오버 화면 오버레이 */
 #overlay {
 position: absolute;
 top: 0;
@@ -123,7 +108,6 @@ justify-content: center;
 align-items: center;
 z-index: 100;
 color: white;
-transition: opacity 0.5s;
 }
 
 #overlay h1 {
@@ -161,39 +145,31 @@ color: white;
 margin-bottom: 20px;
 display: none;
 }
-
 </style>
 </head>
 <body>
 
-<!-- 게임 헤더 -->
 <div id="header">
 <div>점수: <span id="score-display" class="stat-val">0</span></div>
 <div>라이프: <span id="life-display" class="stat-val">❤️❤️❤️</span></div>
 <div>레벨: <span id="level-display" class="stat-val">1</span></div>
 </div>
 
-<!-- 게임 화면 -->
-<div id="game-area">
-<div id="ground"></div>
-<!-- 떨어지는 글자들이 여기에 동적으로 생성됨 -->
-</div>
+<div id="game-area"></div>
 
-<!-- 입력창 -->
 <div id="input-area">
 <input type="text" id="input-word" placeholder="떨어지는 글자를 입력하세요" autocomplete="off">
 </div>
 
-<!-- 시작/게임오버 오버레이 -->
 <div id="overlay">
 <h1 id="overlay-title">추억의 타자 게임</h1>
 <p id="final-score">최종 점수: 0</p>
 <p id="overlay-desc">화면에 떨어지는 한글 단어를 빠르게 입력하세요.</p>
+<!-- 이벤트 리스너가 중복 래핑되지 않도록 온클릭 유지 -->
 <button class="start-btn" onclick="startGame()">게임 시작</button>
 </div>
 
 <script>
-// 게임 데이터 (추억의 단어들)
 const wordList = [
 "한글", "학교", "노트북", "개발자", "스마트폰", "게임", "축구", "바다", "하늘", "친구",
 "마우스", "키보드", "우주", "지구", "사랑", "희망", "도전", "성공", "실패", "연습",
@@ -201,31 +177,26 @@ const wordList = [
 "형", "커피", "자전거", "자동차", "비행기", "나무", "꽃", "강아지", "고양이", "햄스터",
 "점심", "저녁", "아침", "과자", "아이스크림", "떡볶이", "라면", "시험", "방학", "여행",
 "코딩", "파이썬", "자바스크립트", "깃허브", "안드로이드", "아이폰", "갤럭시", "프로그램",
-"산성비", "타자연습", "추억", "옛날", "도스", "컴퓨터", "인터넷", "블로그", "유튜브",
-"마이멜로디", "산리오", "피카츄", "스타벅스", "맥도날드", "버거킹", "롯데리아", "짜장면"
+"산성비", "타자연습", "추억", "옛날", "도스", "컴퓨터", "인터넷", "블로그", "유튜브"
  ];
 
-// 게임 상태 변수
 let score = 0;
 let life = 3;
 let level = 1;
 let isPlaying = false;
-let activeWords = []; // 화면에 있는 글자 객체들
-let wordSpawnTimer;
-let gameLoopTimer;
+let activeWords = [];
+let wordSpawnTimer = null;
+let animationFrameId = null;
 
-// 난이도 설정 (레벨별)
 const difficulty = {
-1: { spawnRate: 2000, fallSpeed: 1 }, // 2초마다, 속도 1
-2: { spawnRate: 1500, fallSpeed: 1.5 },
-3: { spawnRate: 1200, fallSpeed: 2 },
-4: { spawnRate: 1000, fallSpeed: 2.5 },
-5: { spawnRate: 800, fallSpeed: 3 }, // 0.8초마다, 속도 3
+1: { spawnRate: 2200, fallSpeed: 0.8 },
+2: { spawnRate: 1800, fallSpeed: 1.2 },
+3: { spawnRate: 1400, fallSpeed: 1.6 },
+4: { spawnRate: 1100, fallSpeed: 2.0 },
+5: { spawnRate: 900, fallSpeed: 2.5 },
 };
 
-// DOM 요소
 const gameArea = document.getElementById('game-area');
-const ground = document.getElementById('ground');
 const inputWord = document.getElementById('input-word');
 const scoreDisplay = document.getElementById('score-display');
 const lifeDisplay = document.getElementById('life-display');
@@ -236,15 +207,12 @@ const overlayDesc = document.getElementById('overlay-desc');
 const finalScore = document.getElementById('final-score');
 const startBtn = document.querySelector('.start-btn');
 
-// 입력창 이벤트 리스너
 inputWord.addEventListener('input', handleInput);
 
-// 무작위 단어 가져오기
 function getRandomWord() {
 return wordList[Math.floor(Math.random() * wordList.length)];
 }
 
-// 새 글자 스폰
 function spawnWord() {
 if (!isPlaying) return;
 
@@ -253,10 +221,8 @@ const wordEl = document.createElement('span');
 wordEl.classList.add('word');
 wordEl.textContent = wordText;
 
-// 가로 위치 무작위 설정 (글자 폭 고려)
-const areaWidth = gameArea.offsetWidth;
-const wordWidth = 100; // 예상 평균 폭
-const randomX = Math.random() * (areaWidth - wordWidth - 20) + 10;
+const areaWidth = gameArea.offsetWidth || window.innerWidth;
+const randomX = Math.random() * (areaWidth - 120) + 10;
 wordEl.style.left = ${randomX}px`;
 wordEl.style.top = '0px';
 
@@ -269,30 +235,27 @@ y: 0
 });
 }
 
-// 게임 메인 루프 (글자 하락)
 function gameLoop() {
-if (!isPlaying) return;
+if (!isPlaying) {
+if (animationFrameId) cancelAnimationFrame(animationFrameId);
+return;
+}
 
-const currentDifficulty = difficulty[level] || difficulty[5]; // 레벨 5 이후는 레벨 5 속도로 유지
+const currentDifficulty = difficulty[level] || difficulty[5];
+const groundY = gameArea.offsetHeight > 0 ? gameArea.offsetHeight - 25 : window.innerHeight - 150;
 
-// 화면 하단 위치
-const groundY = gameArea.offsetHeight - 5;
-
-// 각 글자 하락 및 바닥 감지
 activeWords = activeWords.filter(wordObj => {
 wordObj.y += currentDifficulty.fallSpeed;
 wordObj.element.style.top = ``${wordObj.y}px`;
 
-// 바닥 도착 감지
 if (wordObj.y >= groundY) {
 loseLife();
 wordObj.element.remove();
-return false; // activeWords에서 제거
+return false;
 }
-return true; // 계속 유지
+return true;
 });
 
-// 입력창 글자와 매칭되는 첫 번째 단어 하이라이트
 const currentInput = inputWord.value.trim();
 document.querySelectorAll('.word').forEach(el => el.classList.remove('target'));
 
@@ -303,10 +266,9 @@ targetWord.element.classList.add('target');
 }
 }
 
-requestAnimationFrame(gameLoop);
+animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-// 입력창 핸들링
 function handleInput() {
 if (!isPlaying) return;
 
@@ -314,35 +276,29 @@ const currentInput = inputWord.value.trim();
 const matchingWordIndex = activeWords.findIndex(w => w.text === currentInput);
 
 if (matchingWordIndex !== -1) {
-// 단어 삭제
 const matchingWord = activeWords[matchingWordIndex];
 matchingWord.element.remove();
 activeWords.splice(matchingWordIndex, 1);
 
-// 점수 계산 (단어 길이별 차등)
 const points = matchingWord.text.length * 10;
 addScore(points);
 
-// 입력창 초기화
 inputWord.value = '';
 }
 }
 
-// 라이프 감소
 function loseLife() {
 life--;
 updateLifeDisplay();
 
-// 화면 붉게 번쩍이는 이펙트
 gameArea.style.backgroundColor = '#552222';
-setTimeout(() => gameArea.style.backgroundColor = '#2c3e50', 200);
+setTimeout(() => gameArea.style.backgroundColor = '#2c3e50', 150);
 
 if (life <= 0) {
 endGame();
 }
 }
 
-// 라이프 디스플레이 업데이트
 function updateLifeDisplay() {
 let lifeStr = '';
 for (let i = 0; i < 3; i++) {
@@ -351,36 +307,33 @@ lifeStr += i < life ? '❤️' : '🤍';
 lifeDisplay.textContent = lifeStr;
 }
 
-// 점수 추가
 function addScore(points) {
 score += points;
 scoreDisplay.textContent = score;
 
-// 500점마다 레벨업
-const nextLevel = Math.floor(score / 500) + 1;
+const nextLevel = Math.floor(score / 300) + 1; // 지루하지 않게 300점마다 레벨업으로 상향
 if (nextLevel > level && nextLevel <= 5) {
 level = nextLevel;
 levelDisplay.textContent = level;
 
-// 스폰 타이머 재설정 (더 빨라짐)
 clearInterval(wordSpawnTimer);
 wordSpawnTimer = setInterval(spawnWord, difficulty[level].spawnRate);
 
-// 레벨업 알림
 const levelUpEl = document.createElement('div');
 levelUpEl.textContent = LEVEL UP! (${level})`;
-levelUpEl.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff9f43; font-size: 3rem; font-weight: bold; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); z-index: 50; transition: opacity 1s;';
+levelUpEl.style.cssText = 'position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #ff9f43; font-size: 2.5rem; font-weight: bold; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); z-index: 50;';
 gameArea.appendChild(levelUpEl);
-setTimeout(() => {
-levelUpEl.style.opacity = '0';
-setTimeout(() => levelUpEl.remove(), 1000);
-}, 1000);
+setTimeout(() => levelUpEl.remove(), 800);
 }
 }
 
-// 게임 시작
 function startGame() {
-// 초기화
+if (isPlaying) return;
+
+// 타이머 파괴 및 초기화 안전장치
+if (wordSpawnTimer) clearInterval(wordSpawnTimer);
+if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
 score = 0;
 life = 3;
 level = 1;
@@ -391,31 +344,29 @@ scoreDisplay.textContent = '0';
 updateLifeDisplay();
 levelDisplay.textContent = '1';
 inputWord.value = '';
+
+// 기존에 남아있던 글자 강제 소멸
+gameArea.innerHTML = '';
+
+// 오버레이 완전 숨기기
+overlay.style.display = 'none';
+
+// 모바일 포커스 강제 유도
+setTimeout(() => {
 inputWord.focus();
+}, 100);
 
-// 이전 단어 삭제
-document.querySelectorAll('.word').forEach(el => el.remove());
-
-// 오버레이 숨기기
-overlay.style.opacity = '0';
-setTimeout(() => overlay.style.display = 'none', 500);
-
-// 루프 시작
-const initialDifficulty = difficulty[level];
-wordSpawnTimer = setInterval(spawnWord, initialDifficulty.spawnRate);
+// 타이머 가동 및 루프 진입
+wordSpawnTimer = setInterval(spawnWord, difficulty[level].spawnRate);
 gameLoop();
 }
 
-// 게임 종료
 function endGame() {
 isPlaying = false;
 clearInterval(wordSpawnTimer);
+if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
-// 오버레이 보이기
 overlay.style.display = 'flex';
-setTimeout(() => overlay.style.opacity = '1', 50);
-
-// 결과 화면 구성
 overlayTitle.textContent = 'GAME OVER';
 overlayTitle.style.color = '#ff6b6b';
 finalScore.textContent = 최종 점수:${score}`;
@@ -423,7 +374,6 @@ finalScore.style.display = 'block';
 overlayDesc.style.display = 'none';
 startBtn.textContent = '다시 도전';
 }
-
 </script>
 </body>
 </html>
