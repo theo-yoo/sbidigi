@@ -3,71 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
-<title>접속 즉시 시작! 장애물 피하기</title>
+<title>즉시 시작 피하기 게임</title>
 <style>
-* {
-box-sizing: border-box;
-margin: 0;
-padding: 0;
-user-select: none;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body { background-color: #111; color: #fff; font-family: sans-serif; text-align: center; overflow: hidden; }
 
-body {
-background-color: #111;
-color: #fff;
-font-family: sans-serif;
-text-align: center;
-overflow: hidden;
-}
-
-/* 상단 점수판 */
 #score-board {
 height: 50px;
 background-color: #222;
-display: flex;
-justify-content: center;
-align-items: center;
+line-height: 50px;
 font-size: 1.3rem;
 font-weight: bold;
 color: #fbc531;
-border-bottom: 2px solid #333;
 }
 
-/* 게임 화면 구역 */
+/* 게임 구역을 브라우저 가시화면 높이(vh)로 아예 고정 */
 #game-container {
 position: relative;
 width: 100%;
 height: calc(100vh - 50px);
-background: linear-gradient(to bottom, #111, #1a1a2e);
+background: #1a1a2e;
 }
 
-/* 플레이어 (우주선 이모지) /
 #player {
 position: absolute;
-bottom: 40px;
+bottom: 30px;
 left: 50%;
 transform: translateX(-50%);
 font-size: 2.5rem;
 width: 50px;
 height: 50px;
-display: flex;
-justify-content: center;
-align-items: center;
-transition: left 0.1s ease-out; / 부드러운 이동 */
+z-index: 5;
 }
 
-/* 떨어지는 장애물 (운석 이모지) */
 .obstacle {
 position: absolute;
 font-size: 2.2rem;
 width: 40px;
 height: 40px;
-display: flex;
-justify-content: center;
-align-items: center;
 }
 
-/* 좌우 터치 조작 영역 (화면 전체를 반으로 쪼갬) */
+/* 터치 영역 패드 */
 #control-zone {
 position: absolute;
 top: 0;
@@ -77,7 +53,6 @@ height: 100%;
 display: flex;
 z-index: 10;
 }
-
 .touch-btn {
 flex: 1;
 height: 100%;
@@ -93,12 +68,10 @@ outline: none;
 <div id="score-board">점수: <span id="score">0</span></div>
 
 <div id="game-container">
-<!-- 터치 구역 -->
 <div id="control-zone">
-<button class="touch-btn" id="left-touch"></button>
-<button class="touch-btn" id="right-touch"></button>
+<div class="touch-btn" id="left-touch"></div>
+<div class="touch-btn" id="right-touch"></div>
 </div>
-<!-- 플레이어 -->
 <div id="player">🚀</div>
 </div>
 
@@ -108,19 +81,16 @@ const player = document.getElementById('player');
 const scoreDisplay = document.getElementById('score');
 
 let score = 0;
-let playerX = 50; // 플레이어 가로 위치 (%)
+let playerX = 50;
 let obstacles = [];
 let isGameOver = false;
-let spawnInterval = 1200; // 장애물 생성 주기 (1.2초)
-let fallSpeed = 4; // 장애물 낙하 속도
 
-let lastSpawnTime = 0;
-let lastFrameTime = 0;
+// 안전하게 화면 높이를 window.innerHeight 기반으로 작동하도록 변경
+let gameHeight = window.innerHeight - 50;
 
-// 좌우 터치/클릭 시 이동 처리 (즉시 이동)
+// 모바일 터치 이벤트 바인딩
 document.getElementById('left-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
 document.getElementById('left-touch').addEventListener('mousedown', moveLeft);
-
 document.getElementById('right-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
 document.getElementById('right-touch').addEventListener('mousedown', moveRight);
 
@@ -138,102 +108,70 @@ if (playerX > 90) playerX = 90;
 player.style.left = playerX + '%';
 }
 
-// 장애물 스폰
-function createObstacle() {
+function spawn() {
+if (isGameOver) return;
+
 const obs = document.createElement('div');
 obs.classList.add('obstacle');
-obs.textContent = Math.random() > 0.5 ? '☄️' : '💥';
+obs.textContent = '☄️';
 
-// 랜덤 가로 위치 (10% ~ 90%)
 const randomX = Math.random() * 80 + 10;
 obs.style.left = randomX + '%';
 obs.style.top = '-50px';
 
 container.appendChild(obs);
-obstacles.push({ element: obs, x: randomX, y: -50 });
+
+let obsY = -50;
+
+// requestAnimationFrame 무한루프 버그 회피를 위해 개별 장애물 타이머 처리
+let obsTimer = setInterval(() => {
+if (isGameOver) {
+clearInterval(obsTimer);
+return;
 }
 
-// 게임 메인 루프 (접속하자마자 자동 가동)
-function updateGame(timestamp) {
-if (isGameOver) return;
+obsY += 5;
+obs.style.top = obsY + 'px';
 
-if (!lastFrameTime) lastFrameTime = timestamp;
-if (!lastSpawnTime) lastSpawnTime = timestamp;
+// 충돌 체크
+const pRect = player.getBoundingClientRect();
+const oRect = obs.getBoundingClientRect();
 
-// 1. 장애물 주기적 생성
-if (timestamp - lastSpawnTime > spawnInterval) {
-createObstacle();
-lastSpawnTime = timestamp;
-
-// 난이도 상승 (점수가 오를수록 속도 업, 생성 주기 단축)
-if (fallSpeed < 10) fallSpeed += 0.1;
-if (spawnInterval > 500) spawnInterval -= 20;
-}
-
-// 2. 장애물 낙하 및 충돌 체크
-const containerHeight = container.offsetHeight;
-const playerRect = player.getBoundingClientRect();
-
-obstacles = obstacles.filter(obs => {
-obs.y += fallSpeed;
-obs.element.style.top = obs.y + 'px';
-
-// 충돌 판정 (BoundingBox 기반으로 정밀하게 체크)
-const obsRect = obs.element.getBoundingClientRect();
-
-if (
-obsRect.left < playerRect.right &&
-obsRect.right > playerRect.left &&
-obsRect.top < playerRect.bottom &&
-obsRect.bottom > playerRect.top
-) {
-triggerGameOver();
-}
-
-// 바닥으로 지나치면 점수 획득 및 제거
-if (obs.y > containerHeight) {
-obs.element.remove();
-score += 10;
-scoreDisplay.textContent = score;
-return false;
-}
-return true;
-});
-
-requestAnimationFrame(updateGame);
-}
-
-// 게임오버 처리
-function triggerGameOver() {
+if (oRect.left < pRect.right && oRect.right > pRect.left && oRect.top < pRect.bottom && oRect.bottom > pRect.top) {
+clearInterval(obsTimer);
 isGameOver = true;
 player.textContent = '💥';
-alert(게임 오버!\n최종 점수: ${score}점\n\n화면을 터치하면 카운트다운 없이 바로 재시작됩니다.);
+alert(게임 오버! 최종 점수: ${score}점\n화면을 누르면 다시 시작됩니다.);
 }
 
-// 재시작 (터치 즉시 재가동)
+// 바닥 통과
+if (obsY > gameHeight) {
+clearInterval(obsTimer);
+obs.remove();
+score += 10;
+scoreDisplay.textContent = score;
+}
+}, 20);
+}
+
 function restartGame() {
 isGameOver = false;
 score = 0;
 playerX = 50;
-spawnInterval = 1200;
-fallSpeed = 4;
 scoreDisplay.textContent = score;
 player.textContent = '🚀';
 player.style.left = '50%';
 
-// 기존 장애물 싹 제거
-obstacles.forEach(obs => obs.element.remove());
-obstacles = [];
-
-lastSpawnTime = 0;
-lastFrameTime = 0;
-requestAnimationFrame(updateGame);
+document.querySelectorAll('.obstacle').forEach(o => o.remove());
 }
 
-// 🌟 [핵심] 페이지 접속 완료되면 버튼 대기 없이 즉시 게임 루프 작동!
-window.onload = function() {
-requestAnimationFrame(updateGame);
-};
+// 켜지자마자 1초마다 장애물 무조건 스폰
+setInterval(spawn, 1000);
+
+// 화면 리사이즈 대응
+window.addEventListener('resize', () => {
+gameHeight = window.innerHeight - 50;
+});
 </script>
 </body>
 </html>
