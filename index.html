@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
-<title>추억의 산성비 타자 게임</title>
+<title>초고속 결재 머신 (Doc Stamp Rush)</title>
 <style>
 * {
 box-sizing: border-box;
@@ -14,365 +14,323 @@ user-select: none;
 }
 
 body {
-background-color: #f0f0f0;
-color: #333;
+background-color: #1e272e;
+color: #fff;
 text-align: center;
 overflow: hidden;
 }
 
-#header {
-background-color: #333;
-color: white;
-padding: 15px;
+/* 대시보드 */
+#dashboard {
+background-color: #2f3640;
+padding: 12px;
 display: flex;
 justify-content: space-around;
 align-items: center;
 font-size: 1.2rem;
 font-weight: bold;
-box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-height: 55px;
+border-bottom: 4px solid #485460;
+height: 60px;
 }
 
-.stat-val {
-color: #ff9f43;
-margin-left: 5px;
-}
+.stat { color: #fbc531; }
+#timer { color: #ff5e57; }
 
-#life-display {
-color: #ff6b6b;
-}
-
-#game-area {
-position: relative;
-width: 100%;
-height: calc(100vh - 125px);
-background-color: #2c3e50;
-overflow: hidden;
-border-bottom: 5px solid #ff6b6b;
-}
-
-.word {
-position: absolute;
-color: white;
-font-size: 1.5rem;
-font-weight: bold;
-padding: 5px 10px;
-border-radius: 5px;
-text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
-white-space: nowrap;
-transition: color 0.1s;
-}
-
-.word.target {
-color: #ff9f43;
-border: 2px solid #ff9f43;
-}
-
-#input-area {
-background-color: #333;
-padding: 10px;
-position: fixed;
-bottom: 0;
-width: 100%;
-height: 70px;
+/* 서류가 나타나는 메인 작업 공간 */
+#work-space {
+height: calc(100vh - 200px);
+background-color: #3d3d3d;
 display: flex;
 justify-content: center;
 align-items: center;
+position: relative;
 }
 
-#input-word {
+/* 결재 서류 카드 스타일 */
+#document-card {
+background-color: #ffffff;
+color: #2f3640;
 width: 85%;
-max-width: 400px;
-padding: 10px 15px;
-font-size: 1.2rem;
-border: 2px solid #555;
-border-radius: 20px;
-outline: none;
+max-width: 320px;
+height: 220px;
+border-radius: 15px;
+box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+padding: 25px;
+transform: scale(1);
+transition: transform 0.05s, background-color 0.1s;
+}
+
+#doc-title {
+font-size: 1.5rem;
+font-weight: bold;
+margin-bottom: 15px;
 text-align: center;
+line-height: 1.4;
 }
 
-#input-word:focus {
-border-color: #ff9f43;
+/* 승인/반려 직관적인 힌트 태그 */
+#doc-hint {
+font-size: 1rem;
+font-weight: bold;
+padding: 5px 15px;
+border-radius: 20px;
+color: #fff;
 }
 
-#overlay {
+.hint-approve { background-color: #4cd137; }
+.hint-reject { background-color: #ff4d4d; }
+
+/* 하단 거대 2버튼 구역 (텐텐 오락실 스타일) */
+#button-zone {
+height: 140px;
+display: flex;
+position: fixed;
+bottom: 0;
+width: 100%;
+}
+
+.action-btn {
+flex: 1;
+border: none;
+font-size: 1.8rem;
+font-weight: bold;
+color: white;
+cursor: pointer;
+display: flex;
+justify-content: center;
+align-items: center;
+box-shadow: inset 0 4px 10px rgba(0,0,0,0.3);
+touch-action: manipulation; /* 모바일 터치 지연 제거 */
+}
+
+#btn-reject { background-color: #ff3f34; border-right: 2px solid #1e272e; } /* 반려 */
+#btn-reject:active { background-color: #d21d14; }
+
+#btn-approve { background-color: #05c46b; border-left: 2px solid #1e272e; } /* 승인 */
+#btn-approve:active { background-color: #049f56; }
+
+/* 접속 대기 화면 오버레이 */
+#intro-overlay {
 position: absolute;
 top: 0;
 left: 0;
 width: 100%;
 height: 100%;
-background-color: rgba(0,0,0,0.8);
+background-color: rgba(0,0,0,0.92);
 display: flex;
 flex-direction: column;
 justify-content: center;
 align-items: center;
-z-index: 100;
-color: white;
+z-index: 999;
+padding: 20px;
 }
 
-#overlay h1 {
-font-size: 3rem;
-color: #ff9f43;
+#intro-overlay h1 {
+font-size: 2.6rem;
+color: #fbc531;
 margin-bottom: 20px;
+text-shadow: 0 0 10px rgba(252, 197, 49, 0.3);
 }
 
-#overlay p {
-font-size: 1.2rem;
-margin-bottom: 30px;
-color: #ccc;
+.guide-box {
+background-color: #2f3640;
+padding: 20px;
+border-radius: 12px;
+text-align: left;
+margin-bottom: 35px;
+max-width: 340px;
+line-height: 1.7;
+font-size: 1.05rem;
+border: 1px solid #485460;
 }
 
-.start-btn {
-padding: 15px 40px;
-font-size: 1.5rem;
+.blink-text {
+font-size: 1.3rem;
+color: #ff5e57;
 font-weight: bold;
-background-color: #ff6b6b;
-color: white;
-border: none;
-border-radius: 30px;
-cursor: pointer;
-transition: 0.3s;
+animation: blink 1s infinite;
 }
 
-.start-btn:hover {
-transform: scale(1.1);
-background-color: #ff9f43;
-}
-
-#final-score {
-font-size: 2rem;
-color: white;
-margin-bottom: 20px;
-display: none;
+@keyframes blink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0; }
 }
 </style>
 </head>
 <body>
 
-<div id="header">
-<div>점수: <span id="score-display" class="stat-val">0</span></div>
-<div>라이프: <span id="life-display" class="stat-val">❤️❤️❤️</span></div>
-<div>레벨: <span id="level-display" class="stat-val">1</span></div>
+<!-- 상단 정보창 -->
+<div id="dashboard">
+<div>처리 건수: <span id="score" class="stat">0</span></div>
+<div>콤보: <span id="combo" class="stat">0</span></div>
+<div>남은 시간: <span id="timer">25</span>초</div>
 </div>
 
-<div id="game-area"></div>
-
-<div id="input-area">
-<input type="text" id="input-word" placeholder="떨어지는 글자를 입력하세요" autocomplete="off">
+<!-- 결재 서류 작업장 -->
+<div id="work-space">
+<div id="document-card">
+<div id="doc-title">결재 대기 서류</div>
+<div id="doc-hint" class="hint-approve">구분</div>
+</div>
 </div>
 
-<div id="overlay">
-<h1 id="overlay-title">추억의 타자 게임</h1>
-<p id="final-score">최종 점수: 0</p>
-<p id="overlay-desc">화면에 떨어지는 한글 단어를 빠르게 입력하세요.</p>
-<!-- 이벤트 리스너가 중복 래핑되지 않도록 온클릭 유지 -->
-<button class="start-btn" onclick="startGame()">게임 시작</button>
+<!-- 하단 거대 연타 버튼 구역 -->
+<div id="button-zone">
+<button class="action-btn" id="btn-reject">🔴 반려 (왼손)</button>
+<button class="action-btn" id="btn-approve">🟢 승인 (오른손)</button>
+</div>
+
+<!-- 대기화면 오버레이 (버튼 없이 하단 터치 시 즉시 가동) -->
+<div id="intro-overlay">
+<h1>🗂️ 초고속 결재 머신</h1>
+<div class="guide-box">
+서류 내용을 보고 빛의 속도로 분류하세요!<br><br>
+• <b>[기획서 / 영수증 / 인상안]</b> ➡️ <b>승인 🟢</b><br>
+• <b>[스팸 / 장바구니 / 뒷담화]</b> ➡️ <b>반려 🔴</b><br><br>
+<span style="color:#fbc531;">⚠️ 틀리면 콤보가 깨지고 점수가 감점됩니다! 25초 동안 불타는 연타를 시작하세요.</span>
+</div>
+<p class="blink-text">하단 [반려] 또는 [승인]을 누르면 즉시 시작!</p>
 </div>
 
 <script>
-const wordList = [
-"한글", "학교", "노트북", "개발자", "스마트폰", "게임", "축구", "바다", "하늘", "친구",
-"마우스", "키보드", "우주", "지구", "사랑", "희망", "도전", "성공", "실패", "연습",
-"독서", "영화", "음악", "노래", "미소", "행복", "가족", "부모님", "동생", "누나",
-"형", "커피", "자전거", "자동차", "비행기", "나무", "꽃", "강아지", "고양이", "햄스터",
-"점심", "저녁", "아침", "과자", "아이스크림", "떡볶이", "라면", "시험", "방학", "여행",
-"코딩", "파이썬", "자바스크립트", "깃허브", "안드로이드", "아이폰", "갤럭시", "프로그램",
-"산성비", "타자연습", "추억", "옛날", "도스", "컴퓨터", "인터넷", "블로그", "유튜브"
- ];
+// 직장인 맞춤형 서류 데이터베이스 (정답 유형 분리)
+const docList = [
+// 승인해야 하는 정상 서류 (approve)
+{ title: "하반기 핵심 기획안", target: "approve" },
+{ title: "야근 식대 법인카드 영수증", target: "approve" },
+{ title: "사무실 소모품 구매 요청서", target: "approve" },
+{ title: "제주도 출장비 정산서", target: "approve" },
+{ title: "전 직원 연봉 인상 요구안", target: "approve" },
+{ title: "신입사원 OJT 교육 계획서", target: "approve" },
+{ title: "서버 용량 증설 비용 청구건", target: "approve" },
+
+// 반려해야 하는 헛짓거리 서류 (reject)
+{ title: "부장님 대머리 비밀 분석글", target: "reject" },
+{ title: "초저금리 대출 유도 스팸메일", target: "reject" },
+{ title: "인터넷 쇼핑몰 장바구니 결제", target: "reject" },
+{ title: "주식 리포트 (업무 중 몰래 봄)", target: "reject" },
+{ title: "탕수육 부먹 찍먹 종결 토론", target: "reject" },
+{ title: "금요일 오후 5시 59분 미팅 신청", target: "reject" },
+{ title: "로또 1등 당첨 시 퇴사 시뮬레이션", target: "reject" }
+];
 
 let score = 0;
-let life = 3;
-let level = 1;
+let combo = 0;
+let timeLeft = 25;
 let isPlaying = false;
-let activeWords = [];
-let wordSpawnTimer = null;
-let animationFrameId = null;
+let currentDoc = null;
+let gameInterval = null;
 
-const difficulty = {
-1: { spawnRate: 2200, fallSpeed: 0.8 },
-2: { spawnRate: 1800, fallSpeed: 1.2 },
-3: { spawnRate: 1400, fallSpeed: 1.6 },
-4: { spawnRate: 1100, fallSpeed: 2.0 },
-5: { spawnRate: 900, fallSpeed: 2.5 },
-};
+const docCard = document.getElementById('document-card');
+const docTitle = document.getElementById('doc-title');
+const docHint = document.getElementById('doc-hint');
+const scoreDisplay = document.getElementById('score');
+const comboDisplay = document.getElementById('combo');
+const timerDisplay = document.getElementById('timer');
+const introOverlay = document.getElementById('intro-overlay');
 
-const gameArea = document.getElementById('game-area');
-const inputWord = document.getElementById('input-word');
-const scoreDisplay = document.getElementById('score-display');
-const lifeDisplay = document.getElementById('life-display');
-const levelDisplay = document.getElementById('level-display');
-const overlay = document.getElementById('overlay');
-const overlayTitle = document.getElementById('overlay-title');
-const overlayDesc = document.getElementById('overlay-desc');
-const finalScore = document.getElementById('final-score');
-const startBtn = document.querySelector('.start-btn');
+const btnReject = document.getElementById('btn-reject');
+const btnApprove = document.getElementById('btn-approve');
 
-inputWord.addEventListener('input', handleInput);
+// 모바일 터치 씹힘 방지 및 PC 클릭 완벽 대응 인터페이스
+btnReject.addEventListener('touchstart', (e) => { e.preventDefault(); pressButton('reject'); });
+btnReject.addEventListener('click', () => { pressButton('reject'); });
 
-function getRandomWord() {
-return wordList[Math.floor(Math.random() * wordList.length)];
+btnApprove.addEventListener('touchstart', (e) => { e.preventDefault(); pressButton('approve'); });
+btnApprove.addEventListener('click', () => { pressButton('approve'); });
+
+// 새로운 서류 무작위로 뽑아 띄우기
+function drawNextDocument() {
+currentDoc = docList[Math.floor(Math.random() * docList.length)];
+docTitle.textContent = currentDoc.title;
+
+// 텍스트 힌트 갱신
+if (currentDoc.target === 'approve') {
+docHint.textContent = "결재 요청";
+docHint.className = "hint-approve";
+} else {
+docHint.textContent = "보안 검람";
+docHint.className = "hint-reject";
+}
 }
 
-function spawnWord() {
-if (!isPlaying) return;
-
-const wordText = getRandomWord();
-const wordEl = document.createElement('span');
-wordEl.classList.add('word');
-wordEl.textContent = wordText;
-
-const areaWidth = gameArea.offsetWidth || window.innerWidth;
-const randomX = Math.random() * (areaWidth - 120) + 10;
-wordEl.style.left = ${randomX}px`;
-wordEl.style.top = '0px';
-
-gameArea.appendChild(wordEl);
-
-activeWords.push({
-element: wordEl,
-text: wordText,
-y: 0
-});
-}
-
-function gameLoop() {
-if (!isPlaying) {
-if (animationFrameId) cancelAnimationFrame(animationFrameId);
+// 버튼 입력 처리 핵심 로직
+function pressButton(playerChoice) {
+// 게임 시작 전이면 첫 탭으로 즉시 게임 가동
+if (!isPlaying && timeLeft === 25) {
+runGameMachine();
 return;
 }
-
-const currentDifficulty = difficulty[level] || difficulty[5];
-const groundY = gameArea.offsetHeight > 0 ? gameArea.offsetHeight - 25 : window.innerHeight - 150;
-
-activeWords = activeWords.filter(wordObj => {
-wordObj.y += currentDifficulty.fallSpeed;
-wordObj.element.style.top = ``${wordObj.y}px`;
-
-if (wordObj.y >= groundY) {
-loseLife();
-wordObj.element.remove();
-return false;
-}
-return true;
-});
-
-const currentInput = inputWord.value.trim();
-document.querySelectorAll('.word').forEach(el => el.classList.remove('target'));
-
-if (currentInput.length > 0) {
-const targetWord = activeWords.find(w => w.text.startsWith(currentInput));
-if (targetWord) {
-targetWord.element.classList.add('target');
-}
-}
-
-animationFrameId = requestAnimationFrame(gameLoop);
-}
-
-function handleInput() {
 if (!isPlaying) return;
 
-const currentInput = inputWord.value.trim();
-const matchingWordIndex = activeWords.findIndex(w => w.text === currentInput);
+// 카드 물리 타격 이펙트 (좌우 튕기기)
+docCard.style.transform = "scale(0.92) rotate(" + (playerChoice === 'approve' ? '6deg' : '-6deg') + ")";
+setTimeout(() => { docCard.style.transform = "scale(1) rotate(0deg)"; }, 50);
 
-if (matchingWordIndex !== -1) {
-const matchingWord = activeWords[matchingWordIndex];
-matchingWord.element.remove();
-activeWords.splice(matchingWordIndex, 1);
-
-const points = matchingWord.text.length * 10;
-addScore(points);
-
-inputWord.value = '';
-}
-}
-
-function loseLife() {
-life--;
-updateLifeDisplay();
-
-gameArea.style.backgroundColor = '#552222';
-setTimeout(() => gameArea.style.backgroundColor = '#2c3e50', 150);
-
-if (life <= 0) {
-endGame();
-}
+// 정답 판별
+if (currentDoc.target === playerChoice) {
+// 정답!
+combo++;
+score += 10 + Math.floor(combo / 5); // 5콤보마다 보너스 점수 추가 추가!
+docCard.style.backgroundColor = "#e1f5fe";
+setTimeout(() => { docCard.style.backgroundColor = "#ffffff"; }, 80);
+} else {
+// 오답.. 페널티!
+combo = 0;
+score -= 15;
+if (score < 0) score = 0;
+docCard.style.backgroundColor = "#ffebee";
+setTimeout(() => { docCard.style.backgroundColor = "#ffffff"; }, 80);
 }
 
-function updateLifeDisplay() {
-let lifeStr = '';
-for (let i = 0; i < 3; i++) {
-lifeStr += i < life ? '❤️' : '🤍';
-}
-lifeDisplay.textContent = lifeStr;
-}
-
-function addScore(points) {
-score += points;
 scoreDisplay.textContent = score;
-
-const nextLevel = Math.floor(score / 300) + 1; // 지루하지 않게 300점마다 레벨업으로 상향
-if (nextLevel > level && nextLevel <= 5) {
-level = nextLevel;
-levelDisplay.textContent = level;
-
-clearInterval(wordSpawnTimer);
-wordSpawnTimer = setInterval(spawnWord, difficulty[level].spawnRate);
-
-const levelUpEl = document.createElement('div');
-levelUpEl.textContent = LEVEL UP! (${level})`;
-levelUpEl.style.cssText = 'position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #ff9f43; font-size: 2.5rem; font-weight: bold; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); z-index: 50;';
-gameArea.appendChild(levelUpEl);
-setTimeout(() => levelUpEl.remove(), 800);
-}
+comboDisplay.textContent = combo;
+drawNextDocument();
 }
 
-function startGame() {
-if (isPlaying) return;
-
-// 타이머 파괴 및 초기화 안전장치
-if (wordSpawnTimer) clearInterval(wordSpawnTimer);
-if (animationFrameId) cancelAnimationFrame(animationFrameId);
-
-score = 0;
-life = 3;
-level = 1;
+// 게임 스타트 가동
+function runGameMachine() {
 isPlaying = true;
-activeWords = [];
+score = 0;
+combo = 0;
+timeLeft = 25;
 
-scoreDisplay.textContent = '0';
-updateLifeDisplay();
-levelDisplay.textContent = '1';
-inputWord.value = '';
+scoreDisplay.textContent = score;
+comboDisplay.textContent = combo;
+timerDisplay.textContent = timeLeft;
 
-// 기존에 남아있던 글자 강제 소멸
-gameArea.innerHTML = '';
+introOverlay.style.display = 'none';
+drawNextDocument();
 
-// 오버레이 완전 숨기기
-overlay.style.display = 'none';
+// 1초마다 도는 카운트다운 타이머
+gameInterval = setInterval(() => {
+timeLeft--;
+timerDisplay.textContent = timeLeft;
 
-// 모바일 포커스 강제 유도
-setTimeout(() => {
-inputWord.focus();
-}, 100);
-
-// 타이머 가동 및 루프 진입
-wordSpawnTimer = setInterval(spawnWord, difficulty[level].spawnRate);
-gameLoop();
+if (timeLeft <= 0) {
+stopGameMachine();
+}
+}, 1000);
 }
 
-function endGame() {
+// 게임 종료 및 정산
+function stopGameMachine() {
 isPlaying = false;
-clearInterval(wordSpawnTimer);
-if (animationFrameId) cancelAnimationFrame(animationFrameId);
+clearInterval(gameInterval);
 
-overlay.style.display = 'flex';
-overlayTitle.textContent = 'GAME OVER';
-overlayTitle.style.color = '#ff6b6b';
-finalScore.textContent = 최종 점수:${score}`;
-finalScore.style.display = 'block';
-overlayDesc.style.display = 'none';
-startBtn.textContent = '다시 도전';
+// 결과 화면으로 인트로 오버레이 재활용 전환
+introOverlay.style.display = 'flex';
+document.getElementById('intro-overlay').querySelector('h1').textContent = "퇴근 정산서 (업무 종료)";
+document.querySelector('.guide-box').innerHTML = &lt;center&gt; &lt;p style="font-size: 1.2rem; margin-bottom: 10px;"&gt;오늘 하루 고생하셨습니다!&lt;/p&gt; &lt;p style="font-size: 2rem; color: #fbc531; font-weight: bold;"&gt;최종 점수: ${score} 점</p>
+<p style="font-size: 1rem; color: #a4b0be; margin-top: 10px;">최고 콤보: ${combo} 연타&lt;/p&gt; &lt;/center&gt;;
+document.querySelector('.blink-text').textContent = "다시 업무를 보려면 버튼을 누르세요!";
+
+// 다시 시작할 수 있도록 시간 초기화
+timeLeft = 25;
 }
 </script>
 </body>
