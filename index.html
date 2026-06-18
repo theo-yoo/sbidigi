@@ -3,175 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
-<title>즉시 시작 피하기 게임</title>
+<title>모바일 즉시 시작 게임</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-body { background-color: #111; color: #fff; font-family: sans-serif; text-align: center; overflow: hidden; }
-
-#score-board {
-height: 50px;
-background-color: #222;
-line-height: 50px;
-font-size: 1.3rem;
-font-weight: bold;
-color: #fbc531;
+/* 모바일 스크롤 및 터치 밀림 현상 완전히 방지 /
+* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+user-select: none;
+-webkit-touch-callout: none;
 }
-
-/* 게임 구역을 브라우저 가시화면 높이(vh)로 아예 고정 */
-#game-container {
-position: relative;
-width: 100%;
-height: calc(100vh - 50px);
-background: #1a1a2e;
-}
-
-#player {
-position: absolute;
-bottom: 30px;
-left: 50%;
-transform: translateX(-50%);
-font-size: 2.5rem;
-width: 50px;
-height: 50px;
-z-index: 5;
-}
-
-.obstacle {
-position: absolute;
-font-size: 2.2rem;
-width: 40px;
-height: 40px;
-}
-
-/* 터치 영역 패드 */
-#control-zone {
-position: absolute;
-top: 0;
-left: 0;
+html, body {
 width: 100%;
 height: 100%;
-display: flex;
-z-index: 10;
+background-color: #0d0e15;
+overflow: hidden;
+position: fixed; / 폰에서 화면 당겨서 새로고침 되는 현상 방지 */
 }
-.touch-btn {
-flex: 1;
-height: 100%;
-background: transparent;
-border: none;
-outline: none;
--webkit-tap-highlight-color: transparent;
+canvas {
+display: block;
+width: 100vw;
+height: 100vh;
 }
 </style>
 </head>
 <body>
 
-<div id="score-board">점수: <span id="score">0</span></div>
-
-<div id="game-container">
-<div id="control-zone">
-<div class="touch-btn" id="left-touch"></div>
-<div class="touch-btn" id="right-touch"></div>
-</div>
-<div id="player">🚀</div>
-</div>
+<canvas id="gameCanvas"></canvas>
 
 <script>
-const container = document.getElementById('game-container');
-const player = document.getElementById('player');
-const scoreDisplay = document.getElementById('score');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 스마트폰 해상도에 맞춰 캔버스 크기 강제 동기화
+function resizeCanvas() {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+}
+resizeCanvas();
 
 let score = 0;
-let playerX = 50;
-let obstacles = [];
 let isGameOver = false;
 
-// 안전하게 화면 높이를 window.innerHeight 기반으로 작동하도록 변경
-let gameHeight = window.innerHeight - 50;
+// 플레이어 설정 (모바일 터치 편의를 위해 크기 넉넉하게 설정)
+const player = {
+x: canvas.width / 2,
+y: canvas.height - 80,
+size: 40,
+emoji: '🚀'
+};
 
-// 모바일 터치 이벤트 바인딩
-document.getElementById('left-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
-document.getElementById('left-touch').addEventListener('mousedown', moveLeft);
-document.getElementById('right-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
-document.getElementById('right-touch').addEventListener('mousedown', moveRight);
+// 장애물 배열 및 세팅
+let obstacles = [];
+let spawnDelay = 40; // 장애물 스폰 타이밍 카운터
+let fallSpeed = 5;
 
-function moveLeft() {
-if (isGameOver) return restartGame();
-playerX -= 15;
-if (playerX < 10) playerX = 10;
-player.style.left = playerX + '%';
-}
+// 📱 모바일 터치 이벤트 바인딩 (화면 좌/우 터치 인식)
+window.addEventListener('touchstart', handleTouch, { passive: false });
+window.addEventListener('mousedown', handleMouse); // PC 테스트용 하이브리드
 
-function moveRight() {
-if (isGameOver) return restartGame();
-playerX += 15;
-if (playerX > 90) playerX = 90;
-player.style.left = playerX + '%';
-}
-
-function spawn() {
-if (isGameOver) return;
-
-const obs = document.createElement('div');
-obs.classList.add('obstacle');
-obs.textContent = '☄️';
-
-const randomX = Math.random() * 80 + 10;
-obs.style.left = randomX + '%';
-obs.style.top = '-50px';
-
-container.appendChild(obs);
-
-let obsY = -50;
-
-// requestAnimationFrame 무한루프 버그 회피를 위해 개별 장애물 타이머 처리
-let obsTimer = setInterval(() => {
+function handleTouch(e) {
+e.preventDefault(); // 모바일 줌, 스크롤 기본 동작 해제
 if (isGameOver) {
-clearInterval(obsTimer);
-return;
+return restartGame();
 }
 
-obsY += 5;
-obs.style.top = obsY + 'px';
+const touchX = e.touches[0].clientX;
+movePlayer(touchX);
+}
 
-// 충돌 체크
-const pRect = player.getBoundingClientRect();
-const oRect = obs.getBoundingClientRect();
+function handleMouse(e) {
+if (isGameOver) {
+return restartGame();
+}
+movePlayer(e.clientX);
+}
 
-if (oRect.left < pRect.right && oRect.right > pRect.left && oRect.top < pRect.bottom && oRect.bottom > pRect.top) {
-clearInterval(obsTimer);
+function movePlayer(clickX) {
+// 화면 중심을 기준으로 왼쪽 터치하면 왼쪽으로, 오른쪽 터치하면 오른쪽으로 이동
+if (clickX < canvas.width / 2) {
+player.x -= canvas.width * 0.15; // 화면 너비의 15%만큼 휙휙 이동
+} else {
+player.x += canvas.width * 0.15;
+}
+
+// 화면 밖 영역 이탈 방지 벽 씌우기
+if (player.x < 30) player.x = 30;
+if (player.x > canvas.width - 30) player.x = canvas.width - 30;
+}
+
+// 장애물 스폰 로직
+function spawnObstacle() {
+spawnDelay--;
+if (spawnDelay <= 0) {
+obstacles.push({
+x: Math.random() * (canvas.width - 40) + 20,
+y: -30,
+size: 30,
+emoji: Math.random() > 0.5 ? '☄️' : '🔥'
+});
+
+// 점수가 높아질수록 더 자주, 더 빠르게 떨어짐
+spawnDelay = Math.max(15, 40 - Math.floor(score / 50));
+fallSpeed = Math.min(12, 5 + (score / 100));
+}
+}
+
+// 🔄 무한 게임 드로잉 루프 (모바일 과부하 없음)
+function draw() {
+// 1. 화면 초기화
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+// 2. 배경 그라데이션 우주 느낌 연출
+let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+gradient.addColorStop(0, '#0d0e15');
+gradient.addColorStop(1, '#1b1d2a');
+ctx.fillStyle = gradient;
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// 3. 점수판 출력
+ctx.fillStyle = '#fbc531';
+ctx.font = 'bold 22px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText(점수: ${score}`, canvas.width / 2, 50);
+
+// 4. 플레이어(우주선) 그리기
+ctx.font = ``${player.size}px sans-serif`;
+ctx.textBaseline = 'middle';
+ctx.fillText(player.emoji, player.x, player.y);
+
+if (!isGameOver) {
+spawnObstacle();
+
+// 5. 장애물 이동 및 충돌 연산
+obstacles.forEach((obs, index) => {
+obs.y += fallSpeed;
+
+// 장애물 출력
+ctx.font = ${obs.size}px sans-serif`;
+ctx.fillText(obs.emoji, obs.x, obs.y);
+
+// 💥 단순 원형 기반 초정밀 충돌 체크 (모바일 렉 유발 차단)
+let dist = Math.hypot(player.x - obs.x, player.y - obs.y);
+if (dist < (player.size / 2 + obs.size / 2) - 5) {
 isGameOver = true;
-player.textContent = '💥';
-alert(게임 오버! 최종 점수: ${score}점\n화면을 누르면 다시 시작됩니다.);
+player.emoji = '💥';
 }
 
-// 바닥 통과
-if (obsY > gameHeight) {
-clearInterval(obsTimer);
-obs.remove();
+// 안전하게 바닥 통과 시 스코어 업 및 배열 삭제
+if (obs.y > canvas.height + 30) {
+obstacles.splice(index, 1);
 score += 10;
-scoreDisplay.textContent = score;
 }
-}, 20);
+});
+} else {
+// 6. 게임오버 화면 출력
+ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+ctx.fillStyle = '#ff7675';
+ctx.font = 'bold 32px sans-serif';
+ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+
+ctx.fillStyle = '#ffffff';
+ctx.font = '16px sans-serif';
+ctx.fillText(최종 점수:${score}점`, canvas.width / 2, canvas.height / 2 + 30);
+ctx.fillText('화면을 아무 데나 터치하면 재시작', canvas.width / 2, canvas.height / 2 + 70);
+}
+
+requestAnimationFrame(draw);
 }
 
 function restartGame() {
-isGameOver = false;
 score = 0;
-playerX = 50;
-scoreDisplay.textContent = score;
-player.textContent = '🚀';
-player.style.left = '50%';
-
-document.querySelectorAll('.obstacle').forEach(o => o.remove());
+obstacles = [];
+isGameOver = false;
+fallSpeed = 5;
+spawnDelay = 40;
+player.x = canvas.width / 2;
+player.emoji = '🚀';
 }
 
-// 켜지자마자 1초마다 장애물 무조건 스폰
-setInterval(spawn, 1000);
+// 창 크기 바뀌면 바로 대응
+window.addEventListener('resize', resizeCanvas);
 
-// 화면 리사이즈 대응
-window.addEventListener('resize', () => {
-gameHeight = window.innerHeight - 50;
-});
+// 즉시 가동 시작
+draw();
 </script>
 </body>
 </html>
