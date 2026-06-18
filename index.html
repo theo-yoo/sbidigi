@@ -3,306 +3,427 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>악마 두더지를 잡아라! (Devil Mole)</title>
+<title>추억의 산성비 타자 게임</title>
 <style>
-/* 전체 스타일 리셋 및 배경 /
+/* 전체 스타일 */
 * {
 box-sizing: border-box;
 margin: 0;
 padding: 0;
-font-family: 'Arial', sans-serif;
+font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
 user-select: none;
 }
+
 body {
-background-color: #1a1a2e;
-color: #fff;
+background-color: #f0f0f0;
+color: #333;
 text-align: center;
-padding: 20px;
-/ 마우스 커서를 이모지 망치 모양으로 변경 /
-cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' style='font-size:30px'><text y='30'>🔨</text></svg>"), auto;
-}
-body:active {
-/ 클릭 시 망치가 때리는 각도로 살짝 회전 */
-cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' style='font-size:30px;transform:rotate(-20deg)'><text y='30'>🔨</text></svg>"), auto;
+overflow: hidden; /* 글자가 화면 밖으로 나가도 스크롤 안 생기게 */
 }
 
-h1 {
-color: #ff4757;
-margin-bottom: 10px;
-font-size: 2.5rem;
-text-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
-}
-
-.desc {
-font-size: 1.1rem;
-color: #a4b0be;
-margin-bottom: 20px;
-}
-
-/* 대시보드 (점수, 시간 표시) */
-.dashboard {
+/* 게임 헤더 (점수, 라이프, 레벨) */
+#header {
+background-color: #333;
+color: white;
+padding: 15px;
 display: flex;
-justify-content: center;
-gap: 30px;
-font-size: 1.3rem;
-font-weight: bold;
-margin-bottom: 20px;
-}
-.score-box { color: #2ed573; }
-.high-box { color: #eccc68; }
-.time-box { color: #ff6348; }
-
-/* 게임 시작 버튼 */
-.start-btn {
-padding: 12px 30px;
+justify-content: space-around;
+align-items: center;
 font-size: 1.2rem;
 font-weight: bold;
-background-color: #ff4757;
-color: white;
-border: none;
-border-radius: 8px;
-cursor: pointer;
-transition: 0.2s;
-margin-bottom: 20px;
-box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
-}
-.start-btn:hover {
-background-color: #ff6b81;
-transform: scale(1.05);
+box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-/* 3x3 게임판 구조 */
-.game-board {
-display: grid;
-grid-template-columns: repeat(3, 1fr);
-grid-template-rows: repeat(3, 1fr);
-gap: 15px;
-max-width: 450px;
-margin: 0 auto;
-background-color: #16a085;
-padding: 20px;
-border-radius: 15px;
-box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.5);
+.stat-val {
+color: #ff9f43;
+margin-left: 5px;
 }
 
-/* 두더지 구멍 */
-.hole {
-background-color: #117a65;
-height: 110px;
-border-radius: 50%;
+#life-display {
+color: #ff6b6b;
+}
+
+/* 게임 화면 /
+#game-area {
 position: relative;
+width: 100%;
+height: calc(100vh - 140px); / 헤더와 입력창 제외한 높이 /
+background-color: #2c3e50;
 overflow: hidden;
-border-bottom: 8px solid #0e6251;
-box-shadow: inset 0 8px 10px rgba(0,0,0,0.6);
+border-bottom: 5px solid #ff6b6b; / 바닥 감지선 */
 }
 
-/* 구멍 내부의 두더지 기본 상태 (아래에 숨어있음) /
-.mole {
+/* 바닥선 감지 */
+#ground {
 position: absolute;
+bottom: 0;
+width: 100%;
+height: 5px;
+background-color: transparent;
+}
+
+/* 떨어지는 글자 스타일 /
+.word {
+position: absolute;
+color: white;
+font-size: 1.5rem;
+font-weight: bold;
+padding: 5px 10px;
+border-radius: 5px;
+text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
+white-space: nowrap; / 글자가 줄바꿈 안 되게 /
+transition: color 0.1s; / 입력 시 색상 반응 */
+}
+
+/* 현재 입력 중인 글자 하이라이트 */
+.word.target {
+color: #ff9f43;
+border: 2px solid #ff9f43;
+}
+
+/* 게임 입력창 */
+#input-area {
+background-color: #333;
+padding: 15px;
+position: fixed;
+bottom: 0;
+width: 100%;
+height: 70px;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+
+#input-word {
+width: 80%;
+max-width: 400px;
+padding: 10px 15px;
+font-size: 1.2rem;
+border: 2px solid #555;
+border-radius: 20px;
+outline: none;
+text-align: center;
+}
+
+#input-word:focus {
+border-color: #ff9f43;
+}
+
+/* 게임 시작/오버 화면 오버레이 */
+#overlay {
+position: absolute;
+top: 0;
+left: 0;
 width: 100%;
 height: 100%;
-top: 100%; / 숨김 /
-left: 0;
-font-size: 55px;
+background-color: rgba(0,0,0,0.8);
 display: flex;
-align-items: center;
+flex-direction: column;
 justify-content: center;
-transition: top 0.12s ease-out; / 튀어나오는 속도 */
+align-items: center;
+z-index: 100;
+color: white;
+transition: opacity 0.5s;
+}
+
+#overlay h1 {
+font-size: 3rem;
+color: #ff9f43;
+margin-bottom: 20px;
+}
+
+#overlay p {
+font-size: 1.2rem;
+margin-bottom: 30px;
+color: #ccc;
+}
+
+.start-btn {
+padding: 15px 40px;
+font-size: 1.5rem;
+font-weight: bold;
+background-color: #ff6b6b;
+color: white;
+border: none;
+border-radius: 30px;
 cursor: pointer;
+transition: 0.3s;
 }
 
-/* 두더지가 올라왔을 때 클래스 */
-.hole.active .mole {
-top: 10%;
+.start-btn:hover {
+transform: scale(1.1);
+background-color: #ff9f43;
 }
 
-/* 착한 놈, 나쁜 놈 이모지 설정 */
-.hole.devil .mole::after { content: "😈"; }
-.hole.angel .mole::after { content: "😇"; }
-
-/* 이펙트: 타격 시 피드백 애니메이션 */
-@keyframes hit-flash {
-0% { background-color: rgba(46, 213, 115, 0.4); }
-100% { background-color: transparent; }
+#final-score {
+font-size: 2rem;
+color: white;
+margin-bottom: 20px;
+display: none;
 }
-@keyframes penalty-flash {
-0% { background-color: rgba(255, 71, 87, 0.5); }
-100% { background-color: transparent; }
-}
-.hit-success { animation: hit-flash 0.2s ease-out; }
-.hit-penalty { animation: penalty-flash 0.3s ease-out; }
 
 </style>
 </head>
 <body>
 
-<h1>😈 악마 두더지 소탕 작전!</h1>
-<p class="desc">착한 두더지(😇)를 때리면 점수가 깎이니 조심해!</p>
-
-<div class="dashboard">
-<div class="score-box">현재 점수: <span id="score">0</span></div>
-<div class="high-box">최고 점수: <span id="high-score">0</span></div>
-<div class="time-box">남은 시간: <span id="time">30</span>초</div>
+<!-- 게임 헤더 -->
+<div id="header">
+<div>점수: <span id="score-display" class="stat-val">0</span></div>
+<div>라이프: <span id="life-display" class="stat-val">❤️❤️❤️</span></div>
+<div>레벨: <span id="level-display" class="stat-val">1</span></div>
 </div>
 
-<button class="start-btn" onclick="startGame()">게임 시작</button>
+<!-- 게임 화면 -->
+<div id="game-area">
+<div id="ground"></div>
+<!-- 떨어지는 글자들이 여기에 동적으로 생성됨 -->
+</div>
 
-<div class="game-board">
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
-<div class="hole" onclick="hitMole(event)"><div class="mole"></div></div>
+<!-- 입력창 -->
+<div id="input-area">
+<input type="text" id="input-word" placeholder="떨어지는 글자를 입력하세요" autocomplete="off">
+</div>
+
+<!-- 시작/게임오버 오버레이 -->
+<div id="overlay">
+<h1 id="overlay-title">추억의 타자 게임</h1>
+<p id="final-score">최종 점수: 0</p>
+<p id="overlay-desc">화면에 떨어지는 한글 단어를 빠르게 입력하세요.</p>
+<button class="start-btn" onclick="startGame()">게임 시작</button>
 </div>
 
 <script>
-const holes = document.querySelectorAll('.hole');
-const scoreDisplay = document.getElementById('score');
-const highScoreDisplay = document.getElementById('high-score');
-const timeDisplay = document.getElementById('time');
+// 게임 데이터 (추억의 단어들)
+const wordList = [
+"한글", "학교", "노트북", "개발자", "스마트폰", "게임", "축구", "바다", "하늘", "친구",
+"마우스", "키보드", "우주", "지구", "사랑", "희망", "도전", "성공", "실패", "연습",
+"독서", "영화", "음악", "노래", "미소", "행복", "가족", "부모님", "동생", "누나",
+"형", "커피", "자전거", "자동차", "비행기", "나무", "꽃", "강아지", "고양이", "햄스터",
+"점심", "저녁", "아침", "과자", "아이스크림", "떡볶이", "라면", "시험", "방학", "여행",
+"코딩", "파이썬", "자바스크립트", "깃허브", "안드로이드", "아이폰", "갤럭시", "프로그램",
+"산성비", "타자연습", "추억", "옛날", "도스", "컴퓨터", "인터넷", "블로그", "유튜브",
+"마이멜로디", "산리오", "피카츄", "스타벅스", "맥도날드", "버거킹", "롯데리아", "짜장면"
+ ];
+
+// 게임 상태 변수
+let score = 0;
+let life = 3;
+let level = 1;
+let isPlaying = false;
+let activeWords = []; // 화면에 있는 글자 객체들
+let wordSpawnTimer;
+let gameLoopTimer;
+
+// 난이도 설정 (레벨별)
+const difficulty = {
+1: { spawnRate: 2000, fallSpeed: 1 }, // 2초마다, 속도 1
+2: { spawnRate: 1500, fallSpeed: 1.5 },
+3: { spawnRate: 1200, fallSpeed: 2 },
+4: { spawnRate: 1000, fallSpeed: 2.5 },
+5: { spawnRate: 800, fallSpeed: 3 }, // 0.8초마다, 속도 3
+};
+
+// DOM 요소
+const gameArea = document.getElementById('game-area');
+const ground = document.getElementById('ground');
+const inputWord = document.getElementById('input-word');
+const scoreDisplay = document.getElementById('score-display');
+const lifeDisplay = document.getElementById('life-display');
+const levelDisplay = document.getElementById('level-display');
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlay-title');
+const overlayDesc = document.getElementById('overlay-desc');
+const finalScore = document.getElementById('final-score');
 const startBtn = document.querySelector('.start-btn');
 
-let score = 0;
-let timeLeft = 30;
-let isPlaying = false;
-let lastHole;
-let gameTimer;
-let spawnTimer;
-let currentSpeed = 1000; // 초기 두더지 등장 속도 (1초)
+// 입력창 이벤트 리스너
+inputWord.addEventListener('input', handleInput);
 
-// 브라우저 캐시에서 최고 점수 불러오기
-let highScore = localStorage.getItem('moleHighScore') || 0;
-highScoreDisplay.textContent = highScore;
-
-// 무작위 구멍 고르기 (연속으로 같은 구멍 안 나오게)
-function randomHole(holes) {
-const idx = Math.floor(Math.random() * holes.length);
-const hole = holes[idx];
-if (hole === lastHole) return randomHole(holes);
-lastHole = hole;
-return hole;
+// 무작위 단어 가져오기
+function getRandomWord() {
+return wordList[Math.floor(Math.random() * wordList.length)];
 }
 
-// 게임 시작 함수
-function startGame() {
-if (isPlaying) return;
+// 새 글자 스폰
+function spawnWord() {
+if (!isPlaying) return;
 
-// 초기화
-isPlaying = true;
-score = 0;
-timeLeft = 30;
-currentSpeed = 1000;
-scoreDisplay.textContent = score;
-timeDisplay.textContent = timeLeft;
-startBtn.style.display = 'none'; // 게임 중엔 시작버튼 숨기기
+const wordText = getRandomWord();
+const wordEl = document.createElement('span');
+wordEl.classList.add('word');
+wordEl.textContent = wordText;
 
-// 구멍 초기화
-holes.forEach(hole => hole.classList.remove('active', 'devil', 'angel'));
+// 가로 위치 무작위 설정 (글자 폭 고려)
+const areaWidth = gameArea.offsetWidth;
+const wordWidth = 100; // 예상 평균 폭
+const randomX = Math.random() * (areaWidth - wordWidth - 20) + 10;
+wordEl.style.left = ${randomX}px`;
+wordEl.style.top = '0px';
 
-// 1초마다 남은 시간 감소 및 난이도 상승 촉진
-gameTimer = setInterval(() => {
-timeLeft--;
-timeDisplay.textContent = timeLeft;
+gameArea.appendChild(wordEl);
 
-// 10초 남았을 때 속도 대폭 상승 (스릴 유발)
-if (timeLeft === 20) adjustSpeed(750);
-if (timeLeft === 10) adjustSpeed(550);
+activeWords.push({
+element: wordEl,
+text: wordText,
+y: 0
+});
+}
 
-if (timeLeft <= 0) {
+// 게임 메인 루프 (글자 하락)
+function gameLoop() {
+if (!isPlaying) return;
+
+const currentDifficulty = difficulty[level] || difficulty[5]; // 레벨 5 이후는 레벨 5 속도로 유지
+
+// 화면 하단 위치
+const groundY = gameArea.offsetHeight - 5;
+
+// 각 글자 하락 및 바닥 감지
+activeWords = activeWords.filter(wordObj => {
+wordObj.y += currentDifficulty.fallSpeed;
+wordObj.element.style.top = ``${wordObj.y}px`;
+
+// 바닥 도착 감지
+if (wordObj.y >= groundY) {
+loseLife();
+wordObj.element.remove();
+return false; // activeWords에서 제거
+}
+return true; // 계속 유지
+});
+
+// 입력창 글자와 매칭되는 첫 번째 단어 하이라이트
+const currentInput = inputWord.value.trim();
+document.querySelectorAll('.word').forEach(el => el.classList.remove('target'));
+
+if (currentInput.length > 0) {
+const targetWord = activeWords.find(w => w.text.startsWith(currentInput));
+if (targetWord) {
+targetWord.element.classList.add('target');
+}
+}
+
+requestAnimationFrame(gameLoop);
+}
+
+// 입력창 핸들링
+function handleInput() {
+if (!isPlaying) return;
+
+const currentInput = inputWord.value.trim();
+const matchingWordIndex = activeWords.findIndex(w => w.text === currentInput);
+
+if (matchingWordIndex !== -1) {
+// 단어 삭제
+const matchingWord = activeWords[matchingWordIndex];
+matchingWord.element.remove();
+activeWords.splice(matchingWordIndex, 1);
+
+// 점수 계산 (단어 길이별 차등)
+const points = matchingWord.text.length * 10;
+addScore(points);
+
+// 입력창 초기화
+inputWord.value = '';
+}
+}
+
+// 라이프 감소
+function loseLife() {
+life--;
+updateLifeDisplay();
+
+// 화면 붉게 번쩍이는 이펙트
+gameArea.style.backgroundColor = '#552222';
+setTimeout(() => gameArea.style.backgroundColor = '#2c3e50', 200);
+
+if (life <= 0) {
 endGame();
 }
-}, 1000);
-
-// 두더지 루프 시작
-runGame();
 }
 
-// 속도 조절 및 타이머 재시작
-function adjustSpeed(newSpeed) {
-currentSpeed = newSpeed;
-clearInterval(spawnTimer);
-runGame();
+// 라이프 디스플레이 업데이트
+function updateLifeDisplay() {
+let lifeStr = '';
+for (let i = 0; i < 3; i++) {
+lifeStr += i < life ? '❤️' : '🤍';
+}
+lifeDisplay.textContent = lifeStr;
 }
 
-// 두더지 출현 반복 제어 루프
-function runGame() {
-if (!isPlaying) return;
-
-spawnMole();
-
-// 난이도에 맞춰 유동적인 타임아웃 계산
-spawnTimer = setInterval(() => {
-if (!isPlaying) return;
-spawnMole();
-}, currentSpeed);
-}
-
-// 두더지 스폰 로직
-function spawnMole() {
-const hole = randomHole(holes);
-
-// 이미 켜져 있다면 패스
-if (hole.classList.contains('active')) return;
-
-// 65% 확률로 악마(😈), 35% 확률로 천사(😇) 등장
-const isDevil = Math.random() < 0.65;
-
-hole.classList.add('active');
-hole.classList.add(isDevil ? 'devil' : 'angel');
-
-// 일정 시간 지나면 쏙 들어가게 처리
-setTimeout(() => {
-hole.classList.remove('active', 'devil', 'angel');
-}, currentSpeed * 0.85);
-}
-
-// 클릭 판정 및 점수 계산
-function hitMole(e) {
-if (!isPlaying) return;
-
-const hole = e.currentTarget;
-
-// 두더지가 안 올라와 있으면 무효
-if (!hole.classList.contains('active')) return;
-
-if (hole.classList.contains('devil')) {
-// 악마 처단 성공
-score += 10;
-hole.classList.add('hit-success');
-setTimeout(() => hole.classList.remove('hit-success'), 200);
-} else if (hole.classList.contains('angel')) {
-// 착한 애 때림 (페널티 폭탄)
-score -= 15;
-hole.classList.add('hit-penalty');
-setTimeout(() => hole.classList.remove('hit-penalty'), 300);
-}
-
-// 맞았으므로 즉시 들어가게 처리
-hole.classList.remove('active', 'devil', 'angel');
+// 점수 추가
+function addScore(points) {
+score += points;
 scoreDisplay.textContent = score;
+
+// 500점마다 레벨업
+const nextLevel = Math.floor(score / 500) + 1;
+if (nextLevel > level && nextLevel <= 5) {
+level = nextLevel;
+levelDisplay.textContent = level;
+
+// 스폰 타이머 재설정 (더 빨라짐)
+clearInterval(wordSpawnTimer);
+wordSpawnTimer = setInterval(spawnWord, difficulty[level].spawnRate);
+
+// 레벨업 알림
+const levelUpEl = document.createElement('div');
+levelUpEl.textContent = LEVEL UP! (${level})`;
+levelUpEl.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff9f43; font-size: 3rem; font-weight: bold; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); z-index: 50; transition: opacity 1s;';
+gameArea.appendChild(levelUpEl);
+setTimeout(() => {
+levelUpEl.style.opacity = '0';
+setTimeout(() => levelUpEl.remove(), 1000);
+}, 1000);
+}
 }
 
-// 게임 종료 처리
+// 게임 시작
+function startGame() {
+// 초기화
+score = 0;
+life = 3;
+level = 1;
+isPlaying = true;
+activeWords = [];
+
+scoreDisplay.textContent = '0';
+updateLifeDisplay();
+levelDisplay.textContent = '1';
+inputWord.value = '';
+inputWord.focus();
+
+// 이전 단어 삭제
+document.querySelectorAll('.word').forEach(el => el.remove());
+
+// 오버레이 숨기기
+overlay.style.opacity = '0';
+setTimeout(() => overlay.style.display = 'none', 500);
+
+// 루프 시작
+const initialDifficulty = difficulty[level];
+wordSpawnTimer = setInterval(spawnWord, initialDifficulty.spawnRate);
+gameLoop();
+}
+
+// 게임 종료
 function endGame() {
 isPlaying = false;
-clearInterval(gameTimer);
-clearInterval(spawnTimer);
+clearInterval(wordSpawnTimer);
 
-startBtn.style.display = 'inline-block';
-startBtn.textContent = '다시 도전하기';
+// 오버레이 보이기
+overlay.style.display = 'flex';
+setTimeout(() => overlay.style.opacity = '1', 50);
 
-// 최고 점수 갱신 및 저장
-if (score > highScore) {
-highScore = score;
-highScoreDisplay.textContent = highScore;
-localStorage.setItem('moleHighScore', highScore);
-alert(🎉 축하합니다! 최고 점수 경신: ${score}점!); } else { alert(게임 오버! 최종 점수: ${score}점);
+// 결과 화면 구성
+overlayTitle.textContent = 'GAME OVER';
+overlayTitle.style.color = '#ff6b6b';
+finalScore.textContent = 최종 점수:${score}`;
+finalScore.style.display = 'block';
+overlayDesc.style.display = 'none';
+startBtn.textContent = '다시 도전';
 }
-}
+
 </script>
 </body>
 </html>
