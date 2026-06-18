@@ -3,335 +3,237 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
-<title>초고속 결재 머신 (Doc Stamp Rush)</title>
+<title>접속 즉시 시작! 장애물 피하기</title>
 <style>
 * {
 box-sizing: border-box;
 margin: 0;
 padding: 0;
-font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
 user-select: none;
 }
 
 body {
-background-color: #1e272e;
+background-color: #111;
 color: #fff;
+font-family: sans-serif;
 text-align: center;
 overflow: hidden;
 }
 
-/* 대시보드 */
-#dashboard {
-background-color: #2f3640;
-padding: 12px;
-display: flex;
-justify-content: space-around;
-align-items: center;
-font-size: 1.2rem;
-font-weight: bold;
-border-bottom: 4px solid #485460;
-height: 60px;
-}
-
-.stat { color: #fbc531; }
-#timer { color: #ff5e57; }
-
-/* 서류가 나타나는 메인 작업 공간 */
-#work-space {
-height: calc(100vh - 200px);
-background-color: #3d3d3d;
+/* 상단 점수판 */
+#score-board {
+height: 50px;
+background-color: #222;
 display: flex;
 justify-content: center;
 align-items: center;
+font-size: 1.3rem;
+font-weight: bold;
+color: #fbc531;
+border-bottom: 2px solid #333;
+}
+
+/* 게임 화면 구역 */
+#game-container {
 position: relative;
-}
-
-/* 결재 서류 카드 스타일 */
-#document-card {
-background-color: #ffffff;
-color: #2f3640;
-width: 85%;
-max-width: 320px;
-height: 220px;
-border-radius: 15px;
-box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-display: flex;
-flex-direction: column;
-justify-content: center;
-align-items: center;
-padding: 25px;
-transform: scale(1);
-transition: transform 0.05s, background-color 0.1s;
-}
-
-#doc-title {
-font-size: 1.5rem;
-font-weight: bold;
-margin-bottom: 15px;
-text-align: center;
-line-height: 1.4;
-}
-
-/* 승인/반려 직관적인 힌트 태그 */
-#doc-hint {
-font-size: 1rem;
-font-weight: bold;
-padding: 5px 15px;
-border-radius: 20px;
-color: #fff;
-}
-
-.hint-approve { background-color: #4cd137; }
-.hint-reject { background-color: #ff4d4d; }
-
-/* 하단 거대 2버튼 구역 (텐텐 오락실 스타일) */
-#button-zone {
-height: 140px;
-display: flex;
-position: fixed;
-bottom: 0;
 width: 100%;
+height: calc(100vh - 50px);
+background: linear-gradient(to bottom, #111, #1a1a2e);
 }
 
-.action-btn {
-flex: 1;
-border: none;
-font-size: 1.8rem;
-font-weight: bold;
-color: white;
-cursor: pointer;
+/* 플레이어 (우주선 이모지) /
+#player {
+position: absolute;
+bottom: 40px;
+left: 50%;
+transform: translateX(-50%);
+font-size: 2.5rem;
+width: 50px;
+height: 50px;
 display: flex;
 justify-content: center;
 align-items: center;
-box-shadow: inset 0 4px 10px rgba(0,0,0,0.3);
-touch-action: manipulation; /* 모바일 터치 지연 제거 */
+transition: left 0.1s ease-out; / 부드러운 이동 */
 }
 
-#btn-reject { background-color: #ff3f34; border-right: 2px solid #1e272e; } /* 반려 */
-#btn-reject:active { background-color: #d21d14; }
+/* 떨어지는 장애물 (운석 이모지) */
+.obstacle {
+position: absolute;
+font-size: 2.2rem;
+width: 40px;
+height: 40px;
+display: flex;
+justify-content: center;
+align-items: center;
+}
 
-#btn-approve { background-color: #05c46b; border-left: 2px solid #1e272e; } /* 승인 */
-#btn-approve:active { background-color: #049f56; }
-
-/* 접속 대기 화면 오버레이 */
-#intro-overlay {
+/* 좌우 터치 조작 영역 (화면 전체를 반으로 쪼갬) */
+#control-zone {
 position: absolute;
 top: 0;
 left: 0;
 width: 100%;
 height: 100%;
-background-color: rgba(0,0,0,0.92);
 display: flex;
-flex-direction: column;
-justify-content: center;
-align-items: center;
-z-index: 999;
-padding: 20px;
+z-index: 10;
 }
 
-#intro-overlay h1 {
-font-size: 2.6rem;
-color: #fbc531;
-margin-bottom: 20px;
-text-shadow: 0 0 10px rgba(252, 197, 49, 0.3);
-}
-
-.guide-box {
-background-color: #2f3640;
-padding: 20px;
-border-radius: 12px;
-text-align: left;
-margin-bottom: 35px;
-max-width: 340px;
-line-height: 1.7;
-font-size: 1.05rem;
-border: 1px solid #485460;
-}
-
-.blink-text {
-font-size: 1.3rem;
-color: #ff5e57;
-font-weight: bold;
-animation: blink 1s infinite;
-}
-
-@keyframes blink {
-0%, 100% { opacity: 1; }
-50% { opacity: 0; }
+.touch-btn {
+flex: 1;
+height: 100%;
+background: transparent;
+border: none;
+outline: none;
+-webkit-tap-highlight-color: transparent;
 }
 </style>
 </head>
 <body>
 
-<!-- 상단 정보창 -->
-<div id="dashboard">
-<div>처리 건수: <span id="score" class="stat">0</span></div>
-<div>콤보: <span id="combo" class="stat">0</span></div>
-<div>남은 시간: <span id="timer">25</span>초</div>
-</div>
+<div id="score-board">점수: <span id="score">0</span></div>
 
-<!-- 결재 서류 작업장 -->
-<div id="work-space">
-<div id="document-card">
-<div id="doc-title">결재 대기 서류</div>
-<div id="doc-hint" class="hint-approve">구분</div>
+<div id="game-container">
+<!-- 터치 구역 -->
+<div id="control-zone">
+<button class="touch-btn" id="left-touch"></button>
+<button class="touch-btn" id="right-touch"></button>
 </div>
-</div>
-
-<!-- 하단 거대 연타 버튼 구역 -->
-<div id="button-zone">
-<button class="action-btn" id="btn-reject">🔴 반려 (왼손)</button>
-<button class="action-btn" id="btn-approve">🟢 승인 (오른손)</button>
-</div>
-
-<!-- 대기화면 오버레이 (버튼 없이 하단 터치 시 즉시 가동) -->
-<div id="intro-overlay">
-<h1>🗂️ 초고속 결재 머신</h1>
-<div class="guide-box">
-서류 내용을 보고 빛의 속도로 분류하세요!<br><br>
-• <b>[기획서 / 영수증 / 인상안]</b> ➡️ <b>승인 🟢</b><br>
-• <b>[스팸 / 장바구니 / 뒷담화]</b> ➡️ <b>반려 🔴</b><br><br>
-<span style="color:#fbc531;">⚠️ 틀리면 콤보가 깨지고 점수가 감점됩니다! 25초 동안 불타는 연타를 시작하세요.</span>
-</div>
-<p class="blink-text">하단 [반려] 또는 [승인]을 누르면 즉시 시작!</p>
+<!-- 플레이어 -->
+<div id="player">🚀</div>
 </div>
 
 <script>
-// 직장인 맞춤형 서류 데이터베이스 (정답 유형 분리)
-const docList = [
-// 승인해야 하는 정상 서류 (approve)
-{ title: "하반기 핵심 기획안", target: "approve" },
-{ title: "야근 식대 법인카드 영수증", target: "approve" },
-{ title: "사무실 소모품 구매 요청서", target: "approve" },
-{ title: "제주도 출장비 정산서", target: "approve" },
-{ title: "전 직원 연봉 인상 요구안", target: "approve" },
-{ title: "신입사원 OJT 교육 계획서", target: "approve" },
-{ title: "서버 용량 증설 비용 청구건", target: "approve" },
-
-// 반려해야 하는 헛짓거리 서류 (reject)
-{ title: "부장님 대머리 비밀 분석글", target: "reject" },
-{ title: "초저금리 대출 유도 스팸메일", target: "reject" },
-{ title: "인터넷 쇼핑몰 장바구니 결제", target: "reject" },
-{ title: "주식 리포트 (업무 중 몰래 봄)", target: "reject" },
-{ title: "탕수육 부먹 찍먹 종결 토론", target: "reject" },
-{ title: "금요일 오후 5시 59분 미팅 신청", target: "reject" },
-{ title: "로또 1등 당첨 시 퇴사 시뮬레이션", target: "reject" }
-];
+const container = document.getElementById('game-container');
+const player = document.getElementById('player');
+const scoreDisplay = document.getElementById('score');
 
 let score = 0;
-let combo = 0;
-let timeLeft = 25;
-let isPlaying = false;
-let currentDoc = null;
-let gameInterval = null;
+let playerX = 50; // 플레이어 가로 위치 (%)
+let obstacles = [];
+let isGameOver = false;
+let spawnInterval = 1200; // 장애물 생성 주기 (1.2초)
+let fallSpeed = 4; // 장애물 낙하 속도
 
-const docCard = document.getElementById('document-card');
-const docTitle = document.getElementById('doc-title');
-const docHint = document.getElementById('doc-hint');
-const scoreDisplay = document.getElementById('score');
-const comboDisplay = document.getElementById('combo');
-const timerDisplay = document.getElementById('timer');
-const introOverlay = document.getElementById('intro-overlay');
+let lastSpawnTime = 0;
+let lastFrameTime = 0;
 
-const btnReject = document.getElementById('btn-reject');
-const btnApprove = document.getElementById('btn-approve');
+// 좌우 터치/클릭 시 이동 처리 (즉시 이동)
+document.getElementById('left-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
+document.getElementById('left-touch').addEventListener('mousedown', moveLeft);
 
-// 모바일 터치 씹힘 방지 및 PC 클릭 완벽 대응 인터페이스
-btnReject.addEventListener('touchstart', (e) => { e.preventDefault(); pressButton('reject'); });
-btnReject.addEventListener('click', () => { pressButton('reject'); });
+document.getElementById('right-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
+document.getElementById('right-touch').addEventListener('mousedown', moveRight);
 
-btnApprove.addEventListener('touchstart', (e) => { e.preventDefault(); pressButton('approve'); });
-btnApprove.addEventListener('click', () => { pressButton('approve'); });
-
-// 새로운 서류 무작위로 뽑아 띄우기
-function drawNextDocument() {
-currentDoc = docList[Math.floor(Math.random() * docList.length)];
-docTitle.textContent = currentDoc.title;
-
-// 텍스트 힌트 갱신
-if (currentDoc.target === 'approve') {
-docHint.textContent = "결재 요청";
-docHint.className = "hint-approve";
-} else {
-docHint.textContent = "보안 검람";
-docHint.className = "hint-reject";
-}
+function moveLeft() {
+if (isGameOver) return restartGame();
+playerX -= 15;
+if (playerX < 10) playerX = 10;
+player.style.left = playerX + '%';
 }
 
-// 버튼 입력 처리 핵심 로직
-function pressButton(playerChoice) {
-// 게임 시작 전이면 첫 탭으로 즉시 게임 가동
-if (!isPlaying && timeLeft === 25) {
-runGameMachine();
-return;
-}
-if (!isPlaying) return;
-
-// 카드 물리 타격 이펙트 (좌우 튕기기)
-docCard.style.transform = "scale(0.92) rotate(" + (playerChoice === 'approve' ? '6deg' : '-6deg') + ")";
-setTimeout(() => { docCard.style.transform = "scale(1) rotate(0deg)"; }, 50);
-
-// 정답 판별
-if (currentDoc.target === playerChoice) {
-// 정답!
-combo++;
-score += 10 + Math.floor(combo / 5); // 5콤보마다 보너스 점수 추가 추가!
-docCard.style.backgroundColor = "#e1f5fe";
-setTimeout(() => { docCard.style.backgroundColor = "#ffffff"; }, 80);
-} else {
-// 오답.. 페널티!
-combo = 0;
-score -= 15;
-if (score < 0) score = 0;
-docCard.style.backgroundColor = "#ffebee";
-setTimeout(() => { docCard.style.backgroundColor = "#ffffff"; }, 80);
+function moveRight() {
+if (isGameOver) return restartGame();
+playerX += 15;
+if (playerX > 90) playerX = 90;
+player.style.left = playerX + '%';
 }
 
+// 장애물 스폰
+function createObstacle() {
+const obs = document.createElement('div');
+obs.classList.add('obstacle');
+obs.textContent = Math.random() > 0.5 ? '☄️' : '💥';
+
+// 랜덤 가로 위치 (10% ~ 90%)
+const randomX = Math.random() * 80 + 10;
+obs.style.left = randomX + '%';
+obs.style.top = '-50px';
+
+container.appendChild(obs);
+obstacles.push({ element: obs, x: randomX, y: -50 });
+}
+
+// 게임 메인 루프 (접속하자마자 자동 가동)
+function updateGame(timestamp) {
+if (isGameOver) return;
+
+if (!lastFrameTime) lastFrameTime = timestamp;
+if (!lastSpawnTime) lastSpawnTime = timestamp;
+
+// 1. 장애물 주기적 생성
+if (timestamp - lastSpawnTime > spawnInterval) {
+createObstacle();
+lastSpawnTime = timestamp;
+
+// 난이도 상승 (점수가 오를수록 속도 업, 생성 주기 단축)
+if (fallSpeed < 10) fallSpeed += 0.1;
+if (spawnInterval > 500) spawnInterval -= 20;
+}
+
+// 2. 장애물 낙하 및 충돌 체크
+const containerHeight = container.offsetHeight;
+const playerRect = player.getBoundingClientRect();
+
+obstacles = obstacles.filter(obs => {
+obs.y += fallSpeed;
+obs.element.style.top = obs.y + 'px';
+
+// 충돌 판정 (BoundingBox 기반으로 정밀하게 체크)
+const obsRect = obs.element.getBoundingClientRect();
+
+if (
+obsRect.left < playerRect.right &&
+obsRect.right > playerRect.left &&
+obsRect.top < playerRect.bottom &&
+obsRect.bottom > playerRect.top
+) {
+triggerGameOver();
+}
+
+// 바닥으로 지나치면 점수 획득 및 제거
+if (obs.y > containerHeight) {
+obs.element.remove();
+score += 10;
 scoreDisplay.textContent = score;
-comboDisplay.textContent = combo;
-drawNextDocument();
+return false;
+}
+return true;
+});
+
+requestAnimationFrame(updateGame);
 }
 
-// 게임 스타트 가동
-function runGameMachine() {
-isPlaying = true;
+// 게임오버 처리
+function triggerGameOver() {
+isGameOver = true;
+player.textContent = '💥';
+alert(게임 오버!\n최종 점수: ${score}점\n\n화면을 터치하면 카운트다운 없이 바로 재시작됩니다.);
+}
+
+// 재시작 (터치 즉시 재가동)
+function restartGame() {
+isGameOver = false;
 score = 0;
-combo = 0;
-timeLeft = 25;
-
+playerX = 50;
+spawnInterval = 1200;
+fallSpeed = 4;
 scoreDisplay.textContent = score;
-comboDisplay.textContent = combo;
-timerDisplay.textContent = timeLeft;
+player.textContent = '🚀';
+player.style.left = '50%';
 
-introOverlay.style.display = 'none';
-drawNextDocument();
+// 기존 장애물 싹 제거
+obstacles.forEach(obs => obs.element.remove());
+obstacles = [];
 
-// 1초마다 도는 카운트다운 타이머
-gameInterval = setInterval(() => {
-timeLeft--;
-timerDisplay.textContent = timeLeft;
-
-if (timeLeft <= 0) {
-stopGameMachine();
-}
-}, 1000);
+lastSpawnTime = 0;
+lastFrameTime = 0;
+requestAnimationFrame(updateGame);
 }
 
-// 게임 종료 및 정산
-function stopGameMachine() {
-isPlaying = false;
-clearInterval(gameInterval);
-
-// 결과 화면으로 인트로 오버레이 재활용 전환
-introOverlay.style.display = 'flex';
-document.getElementById('intro-overlay').querySelector('h1').textContent = "퇴근 정산서 (업무 종료)";
-document.querySelector('.guide-box').innerHTML = &lt;center&gt; &lt;p style="font-size: 1.2rem; margin-bottom: 10px;"&gt;오늘 하루 고생하셨습니다!&lt;/p&gt; &lt;p style="font-size: 2rem; color: #fbc531; font-weight: bold;"&gt;최종 점수: ${score} 점</p>
-<p style="font-size: 1rem; color: #a4b0be; margin-top: 10px;">최고 콤보: ${combo} 연타&lt;/p&gt; &lt;/center&gt;;
-document.querySelector('.blink-text').textContent = "다시 업무를 보려면 버튼을 누르세요!";
-
-// 다시 시작할 수 있도록 시간 초기화
-timeLeft = 25;
-}
+// 🌟 [핵심] 페이지 접속 완료되면 버튼 대기 없이 즉시 게임 루프 작동!
+window.onload = function() {
+requestAnimationFrame(updateGame);
+};
 </script>
 </body>
 </html>
