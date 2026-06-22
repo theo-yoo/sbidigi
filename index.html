@@ -2,179 +2,253 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
 <title>유과장의 출근길</title>
+
 <style>
-/* 모바일 최적화 스크롤 및 바운스 원천 차단 */
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-html, body { background-color: #1e272e; color: #fff; font-family: sans-serif; text-align: center; overflow: hidden; position: fixed; width: 100%; height: 100%; }
-
-#score-board {
-height: 50px;
-line-height: 50px;
-font-size: 1.2rem;
-background: #2f3640;
-color: #fbc531;
-font-weight: bold;
-border-bottom: 3px solid #485460;
+• {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+touch-action: manipulation;
+user-select: none;
 }
 
-/* 지하철 내부 느낌의 게임 화면 구역 /
-#subway-line {
-position: relative;
-width: 100%;
-height: calc(100% - 50px);
-background: linear-gradient(to bottom, #718093, #2f3640);
-/ 테두리를 안쪽으로 밀어 넣어 연산이 꼬이지 않게 처리 */
-border-left: 20px solid #485460;
-border-right: 20px solid #485460;
+body {
+overflow: hidden;
+background: #111;
+font-family: sans-serif;
 }
 
-/* 유과장 캐릭터 */
-#yoo-manager {
-position: absolute;
-bottom: 30px;
-left: 50%;
-transform: translateX(-50%);
-font-size: 2.3rem;
-width: 45px;
-height: 45px;
+#game {
+width: 100vw;
+height: 100vh;
+display: block;
+background: linear-gradient(#1b1b1b, #303030);
+}
+
+#ui {
+position: fixed;
+top: 15px;
+left: 15px;
+color: white;
+font-size: 22px;
 z-index: 10;
-transition: left 0.08s ease-out;
 }
 
-/* 몰려오는 출근길 사람들 (이모지) /
-.people {
-position: absolute;
-font-size: 2rem;
-width: 35px;
-height: 35px;
-z-index: 5;
-transform: translateX(-50%); / 중심점 정렬 */
-}
-
-/* 좌우 터치 패드 (subway-line 안에서만 작동하도록 위치 교정) */
-#left-pad, #right-pad {
-position: absolute;
-top: 0;
-bottom: 0;
-width: 50%;
+#overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,.85);
+display: none;
+justify-content: center;
+align-items: center;
 z-index: 20;
--webkit-tap-highlight-color: transparent;
 }
-#left-pad { left: 0; }
-#right-pad { right: 0; }
+
+#panel {
+text-align: center;
+color: white;
+}
+
+#panel h1 {
+margin-bottom: 12px;
+font-size: 42px;
+}
+
+#panel p {
+margin-bottom: 24px;
+font-size: 24px;
+}
+
+button {
+border: none;
+padding: 18px 30px;
+border-radius: 12px;
+font-size: 22px;
+background: #00c853;
+color: white;
+}
 </style>
 </head>
+
 <body>
 
-<div id="score-board">출근 거리: <span id="score">0</span>m</div>
+<div id="ui">
+출근 거리: <span id="score">0</span>m
+</div>
 
-<div id="subway-line">
-<div id="left-pad"></div>
-<div id="right-pad"></div>
+<canvas id="game"></canvas>
 
-<div id="yoo-manager">🏃‍♂️</div>
+<div id="overlay">
+<div id="panel">
+<h1>지각 확정! 💥</h1>
+<p id="finalScore"></p>
+<button onclick="restart()">다음 날 출근</button>
+</div>
 </div>
 
 <script>
-const subway = document.getElementById('subway-line');
-const yoo = document.getElementById('yoo-manager');
-const scoreDisplay = document.getElementById('score');
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let score = 0;
-let yooX = 50; // 유과장 위치 (%)
-let isGameOver = false;
-let speed = 6; // 사람들의 돌진 속도
-
-// 터치 및 클릭 이벤트 연결
-document.getElementById('left-pad').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(-15); });
-document.getElementById('right-pad').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(15); });
-document.getElementById('left-pad').addEventListener('mousedown', (e) => { e.preventDefault(); movePlayer(-15); });
-document.getElementById('right-pad').addEventListener('mousedown', (e) => { e.preventDefault(); movePlayer(15); });
-
-function movePlayer(dir) {
-if (isGameOver) {
-restartGame();
-return;
+function resize() {
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 }
+resize();
+addEventListener("resize", resize);
 
-// 벽(border) 두께를 감안하여 이동 범위 조절 (8% ~ 92%)
-yooX = Math.max(8, Math.min(92, yooX + dir));
-yoo.style.left = yooX + '%';
-}
+const lanes = [0.25, 0.5, 0.75];
 
-// 출근길 인파 생성
-const crowdEmojis = ['🧍', '🧳', '📱', '🎒', '👨‍💼', '👩‍💼'];
+const villains = ["🎒","🧳","📱","☂️","☕"];
 
-function spawnPeople() {
-if (isGameOver) return;
+let player;
+let obstacles;
+let score;
+let speed;
+let gameOver;
+let spawnTimer;
 
-const npc = document.createElement('div');
-npc.className = 'people';
-npc.textContent = crowdEmojis[Math.floor(Math.random() * crowdEmojis.length)];
+function init() {
+player = {
+lane: 1,
+size: 42
+};
 
-// 승객 등장 가로 위치 무작위 (양쪽 벽 안쪽으로 설정)
-let randomX = Math.random() * 70 + 15;
-npc.style.left = randomX + '%';
-npc.style.top = '-40px';
-subway.appendChild(npc);
-
-let npcY = -40;
-
-// 개별 인터벌 타이머로 구동
-let npcTimer = setInterval(() => {
-if (isGameOver) {
-clearInterval(npcTimer);
-return;
-}
-
-npcY += speed;
-npc.style.top = npcY + 'px';
-
-// 초정밀 충돌 감지 연산
-let pRect = yoo.getBoundingClientRect();
-let nRect = npc.getBoundingClientRect();
-
-if (nRect.left < pRect.right && nRect.right > pRect.left && nRect.top < pRect.bottom && nRect.bottom > pRect.top) {
-isGameOver = true;
-clearInterval(npcTimer);
-yoo.textContent = '💥';
-
-// 지각 확정 알림
-setTimeout(() => {
-alert(지각 확정!\n\n유과장이 사람들에게 치여 넘어졌습니다.\n최종 출근 거리: ${score}m\n\n화면을 누르면 다시 출근합니다.);
-}, 50);
-}
-
-// 무사히 유과장을 지나치면 점수 획득
-if (npcY > subway.offsetHeight) {
-clearInterval(npcTimer);
-npc.remove();
-score += 10;
-scoreDisplay.textContent = score;
-
-// 난이도 상승 제한 (최대 속도 15)
-if (speed < 15) speed += 0.1;
-}
-}, 20);
-}
-
-function restartGame() {
-isGameOver = false;
+obstacles = [];
 score = 0;
-yooX = 50;
-speed = 6;
-scoreDisplay.textContent = '0';
-yoo.textContent = '🏃‍♂️';
-yoo.style.left = '50%';
+speed = 8;
+spawnTimer = 0;
+gameOver = false;
 
-// 남아있던 사람들 싹 제거
-document.querySelectorAll('.people').forEach(p => p.remove());
+document.getElementById("overlay").style.display = "none";
 }
 
-// 0.9초마다 사람 생성
-setInterval(spawnPeople, 900);
+function spawnObstacle() {
+obstacles.push({
+lane: Math.floor(Math.random() * 3),
+y: -60,
+icon: villains[Math.floor(Math.random() * villains.length)]
+});
+}
+
+function update() {
+
+if (gameOver) return;
+
+score += 0.4;
+speed += 0.0005;
+
+document.getElementById("score").textContent =
+Math.floor(score);
+
+spawnTimer++;
+
+if (spawnTimer > 45) {
+spawnObstacle();
+spawnTimer = 0;
+}
+
+for (let i = obstacles.length - 1; i >= 0; i--) {
+
+obstacles[i].y += speed;
+
+if (obstacles[i].y > canvas.height + 60) {
+obstacles.splice(i, 1);
+continue;
+}
+
+const px = canvas.width * lanes[player.lane];
+const py = canvas.height - 120;
+
+const ox = canvas.width * lanes[obstacles[i].lane];
+
+if (
+Math.abs(px - ox) < 30 &&
+Math.abs(py - obstacles[i].y) < 40
+) {
+endGame();
+}
+}
+}
+
+function drawTrack() {
+
+ctx.fillStyle = "#222";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+ctx.strokeStyle = "#666";
+ctx.lineWidth = 6;
+
+for (let i = 1; i <= 2; i++) {
+
+const x = canvas.width * (i / 3);
+
+ctx.beginPath();
+ctx.moveTo(x, 0);
+ctx.lineTo(x, canvas.height);
+ctx.stroke();
+}
+}
+
+function draw() {
+
+drawTrack();
+
+ctx.font = "48px serif";
+ctx.textAlign = "center";
+
+const px = canvas.width * lanes[player.lane];
+const py = canvas.height - 120;
+
+ctx.fillText("🏃‍♂️", px, py);
+
+obstacles.forEach(o => {
+ctx.fillText(
+o.icon,
+canvas.width * lanes[o.lane],
+o.y
+);
+});
+}
+
+function loop() {
+update();
+draw();
+requestAnimationFrame(loop);
+}
+
+function endGame() {
+
+gameOver = true;
+
+document.getElementById("finalScore").textContent =
+출근 거리 ${Math.floor(score)}m;
+
+document.getElementById("overlay").style.display =
+"flex";
+}
+
+function restart() {
+init();
+}
+
+document.addEventListener("pointerdown", e => {
+
+if (gameOver) return;
+
+if (e.clientX < innerWidth / 2) {
+player.lane = Math.max(0, player.lane - 1);
+} else {
+player.lane = Math.min(2, player.lane + 1);
+}
+});
+
+init();
+loop();
 </script>
+
 </body>
 </html>
