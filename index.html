@@ -2,253 +2,176 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
-<title>유과장의 출근길</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+<title>즉시 시작 피하기 게임</title>
 <style>
-• {
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-touch-action: manipulation;
-user-select: none;
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body { background-color: #111; color: #fff; font-family: sans-serif; text-align: center; overflow: hidden; }
+
+#score-board {
+height: 50px;
+background-color: #222;
+line-height: 50px;
+font-size: 1.3rem;
+font-weight: bold;
+color: #fbc531;
 }
 
-body {
-overflow: hidden;
-background: #111;
-font-family: sans-serif;
+/* 게임 구역을 브라우저 가시화면 높이(vh)로 아예 고정 */
+#game-container {
+position: relative;
+width: 100%;
+height: calc(100vh - 50px);
+background: #1a1a2e;
 }
 
-#game {
-width: 100vw;
-height: 100vh;
-display: block;
-background: linear-gradient(#1b1b1b, #303030);
+#player {
+position: absolute;
+bottom: 30px;
+left: 50%;
+transform: translateX(-50%);
+font-size: 2.5rem;
+width: 50px;
+height: 50px;
+z-index: 5;
 }
 
-#ui {
-position: fixed;
-top: 15px;
-left: 15px;
-color: white;
-font-size: 22px;
+.obstacle {
+position: absolute;
+font-size: 2.2rem;
+width: 40px;
+height: 40px;
+}
+
+/* 터치 영역 패드 */
+#control-zone {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+display: flex;
 z-index: 10;
 }
-
-#overlay {
-position: fixed;
-inset: 0;
-background: rgba(0,0,0,.85);
-display: none;
-justify-content: center;
-align-items: center;
-z-index: 20;
-}
-
-#panel {
-text-align: center;
-color: white;
-}
-
-#panel h1 {
-margin-bottom: 12px;
-font-size: 42px;
-}
-
-#panel p {
-margin-bottom: 24px;
-font-size: 24px;
-}
-
-button {
+.touch-btn {
+flex: 1;
+height: 100%;
+background: transparent;
 border: none;
-padding: 18px 30px;
-border-radius: 12px;
-font-size: 22px;
-background: #00c853;
-color: white;
+outline: none;
+-webkit-tap-highlight-color: transparent;
 }
 </style>
 </head>
-
 <body>
 
-<div id="ui">
-출근 거리: <span id="score">0</span>m
-</div>
+<div id="score-board">점수: <span id="score">0</span></div>
 
-<canvas id="game"></canvas>
-
-<div id="overlay">
-<div id="panel">
-<h1>지각 확정! 💥</h1>
-<p id="finalScore"></p>
-<button onclick="restart()">다음 날 출근</button>
+<div id="game-container">
+<div id="control-zone">
+<div class="touch-btn" id="left-touch"></div>
+<div class="touch-btn" id="right-touch"></div>
 </div>
+<div id="player">🚀</div>
 </div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const container = document.getElementById('game-container');
+const player = document.getElementById('player');
+const scoreDisplay = document.getElementById('score');
 
-function resize() {
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+let score = 0;
+let playerX = 50;
+let obstacles = [];
+let isGameOver = false;
+
+// 안전하게 화면 높이를 window.innerHeight 기반으로 작동하도록 변경
+let gameHeight = window.innerHeight - 50;
+
+// 모바일 터치 이벤트 바인딩
+document.getElementById('left-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
+document.getElementById('left-touch').addEventListener('mousedown', moveLeft);
+document.getElementById('right-touch').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
+document.getElementById('right-touch').addEventListener('mousedown', moveRight);
+
+function moveLeft() {
+if (isGameOver) return restartGame();
+playerX -= 15;
+if (playerX < 10) playerX = 10;
+player.style.left = playerX + '%';
 }
-resize();
-addEventListener("resize", resize);
 
-const lanes = [0.25, 0.5, 0.75];
+function moveRight() {
+if (isGameOver) return restartGame();
+playerX += 15;
+if (playerX > 90) playerX = 90;
+player.style.left = playerX + '%';
+}
 
-const villains = ["🎒","🧳","📱","☂️","☕"];
+function spawn() {
+if (isGameOver) return;
 
-let player;
-let obstacles;
-let score;
-let speed;
-let gameOver;
-let spawnTimer;
+const obs = document.createElement('div');
+obs.classList.add('obstacle');
+obs.textContent = '☄️';
 
-function init() {
-player = {
-lane: 1,
-size: 42
-};
+const randomX = Math.random() * 80 + 10;
+obs.style.left = randomX + '%';
+obs.style.top = '-50px';
 
-obstacles = [];
+container.appendChild(obs);
+
+let obsY = -50;
+
+// requestAnimationFrame 무한루프 버그 회피를 위해 개별 장애물 타이머 처리
+let obsTimer = setInterval(() => {
+if (isGameOver) {
+clearInterval(obsTimer);
+return;
+}
+
+obsY += 5;
+obs.style.top = obsY + 'px';
+
+// 충돌 체크
+const pRect = player.getBoundingClientRect();
+const oRect = obs.getBoundingClientRect();
+
+if (oRect.left < pRect.right && oRect.right > pRect.left && oRect.top < pRect.bottom && oRect.bottom > pRect.top) {
+clearInterval(obsTimer);
+isGameOver = true;
+player.textContent = '💥';
+alert(게임 오버! 최종 점수: ${score}점\n화면을 누르면 다시 시작됩니다.);
+}
+
+// 바닥 통과
+if (obsY > gameHeight) {
+clearInterval(obsTimer);
+obs.remove();
+score += 10;
+scoreDisplay.textContent = score;
+}
+}, 20);
+}
+
+function restartGame() {
+isGameOver = false;
 score = 0;
-speed = 8;
-spawnTimer = 0;
-gameOver = false;
+playerX = 50;
+scoreDisplay.textContent = score;
+player.textContent = '🚀';
+player.style.left = '50%';
 
-document.getElementById("overlay").style.display = "none";
+document.querySelectorAll('.obstacle').forEach(o => o.remove());
 }
 
-function spawnObstacle() {
-obstacles.push({
-lane: Math.floor(Math.random() * 3),
-y: -60,
-icon: villains[Math.floor(Math.random() * villains.length)]
+// 켜지자마자 1초마다 장애물 무조건 스폰
+setInterval(spawn, 1000);
+
+// 화면 리사이즈 대응
+window.addEventListener('resize', () => {
+gameHeight = window.innerHeight - 50;
 });
-}
-
-function update() {
-
-if (gameOver) return;
-
-score += 0.4;
-speed += 0.0005;
-
-document.getElementById("score").textContent =
-Math.floor(score);
-
-spawnTimer++;
-
-if (spawnTimer > 45) {
-spawnObstacle();
-spawnTimer = 0;
-}
-
-for (let i = obstacles.length - 1; i >= 0; i--) {
-
-obstacles[i].y += speed;
-
-if (obstacles[i].y > canvas.height + 60) {
-obstacles.splice(i, 1);
-continue;
-}
-
-const px = canvas.width * lanes[player.lane];
-const py = canvas.height - 120;
-
-const ox = canvas.width * lanes[obstacles[i].lane];
-
-if (
-Math.abs(px - ox) < 30 &&
-Math.abs(py - obstacles[i].y) < 40
-) {
-endGame();
-}
-}
-}
-
-function drawTrack() {
-
-ctx.fillStyle = "#222";
-ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-ctx.strokeStyle = "#666";
-ctx.lineWidth = 6;
-
-for (let i = 1; i <= 2; i++) {
-
-const x = canvas.width * (i / 3);
-
-ctx.beginPath();
-ctx.moveTo(x, 0);
-ctx.lineTo(x, canvas.height);
-ctx.stroke();
-}
-}
-
-function draw() {
-
-drawTrack();
-
-ctx.font = "48px serif";
-ctx.textAlign = "center";
-
-const px = canvas.width * lanes[player.lane];
-const py = canvas.height - 120;
-
-ctx.fillText("🏃‍♂️", px, py);
-
-obstacles.forEach(o => {
-ctx.fillText(
-o.icon,
-canvas.width * lanes[o.lane],
-o.y
-);
-});
-}
-
-function loop() {
-update();
-draw();
-requestAnimationFrame(loop);
-}
-
-function endGame() {
-
-gameOver = true;
-
-document.getElementById("finalScore").textContent =
-출근 거리 ${Math.floor(score)}m;
-
-document.getElementById("overlay").style.display =
-"flex";
-}
-
-function restart() {
-init();
-}
-
-document.addEventListener("pointerdown", e => {
-
-if (gameOver) return;
-
-if (e.clientX < innerWidth / 2) {
-player.lane = Math.max(0, player.lane - 1);
-} else {
-player.lane = Math.min(2, player.lane + 1);
-}
-});
-
-init();
-loop();
 </script>
-
 </body>
 </html>
